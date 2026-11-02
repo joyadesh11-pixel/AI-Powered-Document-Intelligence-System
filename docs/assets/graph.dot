@@ -1,0 +1,50 @@
+digraph G {
+rankdir=TB; nodesep=0.45; ranksep=0.55; dpi=150; bgcolor="white";
+node [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=11, color="#555555", margin="0.18,0.08"];
+edge [fontname="Helvetica", fontsize=9, color="#666666", arrowsize=0.7];
+"__start__" [label="START", shape=circle, fillcolor="#444444", fontcolor="white", width=0.55];
+"intake" [fillcolor="#E6F1FB"];
+"pdf_triage" [fillcolor="#E6F1FB"];
+"pdf_text" [fillcolor="#E6F1FB"];
+"image_prep" [fillcolor="#E6F1FB"];
+"ocr" [fillcolor="#E6F1FB"];
+"sheet_load" [fillcolor="#E6F1FB"];
+"sheet_classify" [fillcolor="#E6F1FB"];
+"sheet_map" [fillcolor="#EEEDFE"];
+"sheet_transform" [fillcolor="#EEEDFE"];
+"segment" [fillcolor="#EEEDFE"];
+"llm_extract" [fillcolor="#EEEDFE"];
+"validate" [fillcolor="#E1F5EE"];
+"vision_extract" [fillcolor="#EEEDFE"];
+"finalize" [fillcolor="#E1F5EE"];
+"fail" [fillcolor="#FCEBEB"];
+"__end__" [label="END", shape=doublecircle, fillcolor="#444444", fontcolor="white", width=0.55];
+"__start__" -> "intake" [];
+"image_prep" -> "ocr" [];
+"intake" -> "fail" [style=dashed, label="corrupt /
+unsupported"];
+"intake" -> "image_prep" [style=dashed];
+"intake" -> "pdf_triage" [style=dashed];
+"intake" -> "sheet_load" [style=dashed];
+"llm_extract" -> "validate" [];
+"ocr" -> "segment" [];
+"pdf_text" -> "image_prep" [style=dashed, label="scanned
+pages"];
+"pdf_text" -> "segment" [style=dashed];
+"pdf_triage" -> "pdf_text" [];
+"segment" -> "llm_extract" [];
+"sheet_classify" -> "segment" [style=dashed, label="free-form"];
+"sheet_classify" -> "sheet_map" [style=dashed, label="tabular"];
+"sheet_load" -> "sheet_classify" [];
+"sheet_map" -> "sheet_transform" [];
+"sheet_transform" -> "finalize" [style=dashed, label="retry used up"];
+"sheet_transform" -> "sheet_map" [style=dashed, label="parse < 95%
+(retry once)"];
+"sheet_transform" -> "validate" [style=dashed];
+"validate" -> "finalize" [style=dashed];
+"validate" -> "vision_extract" [style=dashed, label="checks failed
+(once only)"];
+"vision_extract" -> "validate" [];
+"fail" -> "__end__" [];
+"finalize" -> "__end__" [];
+}
