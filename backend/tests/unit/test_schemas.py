@@ -166,9 +166,9 @@ def test_json_roundtrip_line_item_money():
 
 # ---------------------------------------------- stream_process node order
 
-def test_stream_process_yields_nodes_in_order():
+def test_stream_process_yields_nodes_in_order(fx):
     """stream_process yields (node_name, state_update) for a clean digital PDF."""
-    pairs = list(stream_process("a.pdf", _sim={}))
+    pairs = list(stream_process(str(fx["pdf"]), _sim={}))
     node_names = [name for name, _ in pairs]
     # all yielded items must have a string node name and dict update
     for name, update in pairs:

@@ -1,71 +1,72 @@
 """Dry-run scenario tests.
 
-Covers all 12 original scenarios from reference/graph_skeleton/run_demo.py plus
-the new scenario 13 (Fix 1): xlsx arithmetic error -> needs_review, no vision.
+Covers all 13 scenarios (original 12 + scenario 13 from Fix 1).
+Intake now uses real file I/O; downstream nodes still use sim switches (removed in M7).
 
-These are unit-level integration tests against the stub pipeline with sim switches.
-No real LLM, OCR, or file I/O.
+Each scenario maps to a fixture file via the session-scoped `fx` dict in conftest.py.
 """
 from __future__ import annotations
 
 import pytest
 
-from app.pipeline.graph import process
+from app.pipeline.graph import process, _default_deps
 from app.schemas.models import DocStatus
 
 
-# (label, file_path, sim, expected_status, assert_no_node)
+# (label, file_key, sim, expected_status, assert_no_node)
+# file_key is looked up in the fx fixture at test time.
 SCENARIOS = [
     ("digital PDF, clean",
-     "a.pdf", {}, DocStatus.validated_ok, None),
+     "pdf", {}, DocStatus.validated_ok, None),
 
     ("scanned image",
-     "a.png", {}, DocStatus.validated_ok, None),
+     "image", {}, DocStatus.validated_ok, None),
 
     ("mixed PDF + low-conf OCR unit",
-     "a.pdf", {"scanned_pages": [2], "units": 2, "low_conf_units": [1]},
+     "pdf", {"scanned_pages": [2], "units": 2, "low_conf_units": [1]},
      DocStatus.validated_ok, None),
 
     ("arith error fixed by vision",
-     "a.pdf", {"arith_fail_units": [0]}, DocStatus.validated_ok, None),
+     "pdf", {"arith_fail_units": [0]}, DocStatus.validated_ok, None),
 
     ("arith error persists",
-     "a.pdf", {"persistent_fail_units": [0]}, DocStatus.needs_review, None),
+     "pdf", {"persistent_fail_units": [0]}, DocStatus.needs_review, None),
 
     ("xlsx tabular",
-     "a.xlsx", {}, DocStatus.validated_ok, None),
+     "xlsx", {}, DocStatus.validated_ok, None),
 
     ("xlsx mapping bad once (retry)",
-     "a.xlsx", {"bad_mapping": 1}, DocStatus.validated_ok, None),
+     "xlsx", {"bad_mapping": 1}, DocStatus.validated_ok, None),
 
     ("xlsx mapping bad twice",
-     "a.xlsx", {"bad_mapping": 2}, DocStatus.needs_review, None),
+     "xlsx", {"bad_mapping": 2}, DocStatus.needs_review, None),
 
     ("csv free-form",
-     "a.csv", {"freeform": True}, DocStatus.validated_ok, None),
+     "freeform_csv", {"freeform": True}, DocStatus.validated_ok, None),
 
     ("corrupt file",
-     "a.pdf", {"corrupt": True}, DocStatus.failed, None),
+     "corrupt", {}, DocStatus.failed, None),
 
     ("unsupported .docx",
-     "a.docx", {}, DocStatus.failed, None),
+     "unsupported", {}, DocStatus.failed, None),
 
     ("exception inside segment",
-     "a.pdf", {"raise_in": "segment"}, DocStatus.failed, None),
+     "pdf", {"raise_in": "segment"}, DocStatus.failed, None),
 
     # Scenario 13 — Fix 1: xlsx with arithmetic error must NOT escalate to vision
     ("xlsx arithmetic error -> needs_review, no vision",
-     "a.xlsx", {"arith_fail_units": [0]}, DocStatus.needs_review, "vision_extract"),
+     "xlsx", {"arith_fail_units": [0]}, DocStatus.needs_review, "vision_extract"),
 ]
 
 
 @pytest.mark.parametrize(
-    "label,file_path,sim,expected_status,assert_no_node",
+    "label,file_key,sim,expected_status,assert_no_node",
     SCENARIOS,
     ids=[s[0] for s in SCENARIOS],
 )
-def test_scenario(label, file_path, sim, expected_status, assert_no_node):
-    result = process(file_path, _sim=sim)
+def test_scenario(label, file_key, sim, expected_status, assert_no_node, fx):
+    file_path = str(fx[file_key])
+    result = process(file_path, deps=_default_deps(), _sim=sim)
     assert result.status == expected_status, (
         f"[{label}] expected {expected_status!r}, got {result.status!r}\n"
         f"history: {[h['node'] for h in result.history]}"

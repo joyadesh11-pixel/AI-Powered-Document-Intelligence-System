@@ -24,7 +24,7 @@ from app.pipeline.routers import (
     route_after_transform,
     route_after_validate,
 )
-from app.pipeline.nodes.intake import intake
+from app.pipeline.nodes.intake import make_intake
 from app.pipeline.nodes.pdf_triage import pdf_triage
 from app.pipeline.nodes.pdf_text import pdf_text
 from app.pipeline.nodes.image_prep import image_prep
@@ -64,6 +64,7 @@ def build_graph(deps: Deps | None = None):
     g = StateGraph(State)
 
     validate = make_validate(deps)
+    intake = make_intake(deps)
 
     # register nodes
     for name, fn in [
@@ -139,6 +140,9 @@ def process(
             "llm_usage": {},
             "pipeline_version": "0.0.1-m0",
         }
+    # Always use the fully-merged history from final state so nodes like fail
+    # (which build result before the wrapper appends their own entry) are included.
+    raw["history"] = final.get("history", [])
     return PipelineResult.model_validate(raw)
 
 
