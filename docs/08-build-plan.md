@@ -12,7 +12,7 @@ If behind: cut in this order: frontend polish -> search filters -> API rate limi
   *Accept:* `pytest` green, graph image regenerates. Docs: 00, 01, 02, 03.
 - [x] **M1 Pure logic (60-75 min).** `utils/money.py, dates.py, text_norm.py, hashing.py`; `validation/*`; `validate` node. *Accept:* every test row in docs/04 passes; no `float`. Docs: 04, nodes/validate.
 - [ ] **M2 Fixtures v0 + intake/fail (45 min).** `generate_fixtures.py` producing the small set (digital A/B, multi-page C, xlsx/csv, bad files) with ground truth; `intake`, `fail`. *Accept:* intake T1-T10. Docs: 05, nodes/intake, nodes/fail.
-- [ ] **M3 PDF path (45 min).** `pdf_triage`, `pdf_text`. *Accept:* tests green; line items of clean fixtures reconstructable from tables. Docs: nodes/pdf_triage, pdf_text.
+- [x] **M3 PDF path (45 min).** `pdf_triage`, `pdf_text`. *Accept:* tests green; line items of clean fixtures reconstructable from tables. Docs: nodes/pdf_triage, pdf_text.
 - [ ] **M4 Sheet path (75 min).** `sheet_load, sheet_classify, sheet_map, sheet_transform` with `FakeLLM` first, synonyms table. *Accept:* sheet tests + perf test numbers noted. Docs: nodes/sheet_*.
 - [ ] **M5 Image path (60 min, hard cap 45 on OCR tuning).** `image_prep`, `ocr`. *Accept:* tests green; mean conf and sec/page noted. Docs: nodes/image_prep, ocr.
 - [ ] **M6 LLM nodes (90 min).** `llm/client.py` (Gemini), `prompts.py`, `segment`, `llm_extract`, `vision_extract`, `finalize`. *Accept:* unit tests with `FakeLLM`; then `pytest -m live` 4-5 real calls pass. Docs: 03, nodes/segment, llm_extract, vision_extract, finalize.
@@ -45,4 +45,6 @@ After approval: "Implement. Write the tests from the spec first and show them fa
 - Remove the dict/Invoice dual handling and the stub "unit" key in validate.
 - Grounding must skip only for page_source in {sheet, vision}, NOT when source_text is empty
   (an empty OCR page must surface as a problem).
+- llm_extract GT lookup via sim["gt_invoices"] goes away when M6 real extraction is done.
+  real ocr/image_prep must merge into page_text/page_source (append), not replace them.
 - Add a test for _extract_amounts on "Total 1,234.56 EUR 99 Qty 10".

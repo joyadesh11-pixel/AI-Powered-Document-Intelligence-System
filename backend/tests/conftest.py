@@ -22,11 +22,7 @@ def fixture_dir(tmp_path_factory: pytest.TempPathFactory) -> Path:
 
 @pytest.fixture(scope="session")
 def fx(fixture_dir: Path) -> dict[str, Path]:
-    """Map of logical scenario names to actual fixture paths.
-
-    Downstream scenario tests swap symbolic names for real paths through this map.
-    All nodes past intake still use sim switches (removed in M7).
-    """
+    """Map of logical scenario names to actual fixture paths."""
     return {
         "pdf":        fixture_dir / "digital_A_001.pdf",
         "image":      fixture_dir / "valid_001.png",
@@ -35,4 +31,14 @@ def fx(fixture_dir: Path) -> dict[str, Path]:
         "freeform_csv": fixture_dir / "freeform_001.csv",
         "corrupt":    fixture_dir / "bad_truncated.pdf",
         "unsupported": fixture_dir / "bad_docx.docx",
+        "mixed":      fixture_dir / "mixed.pdf",
     }
+
+
+@pytest.fixture(scope="session")
+def gt(fixture_dir: Path) -> dict[str, dict]:
+    """Ground-truth index keyed by filename."""
+    import json
+    with open(fixture_dir / "ground_truth.json") as f:
+        entries = json.load(f)
+    return {e["file"]: e for e in entries}

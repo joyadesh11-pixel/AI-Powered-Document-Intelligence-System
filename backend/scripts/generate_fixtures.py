@@ -13,7 +13,9 @@ import csv
 import io
 import json
 import os
+import re
 import struct
+import warnings
 import zipfile
 from pathlib import Path
 from typing import Any
@@ -152,6 +154,16 @@ def _make_pdf_template_A(
             }
             for it in line_items
         ],
+        "printed": {
+            "invoice_number": inv_number,
+            "invoice_date": inv_date,
+            "supplier_name": supplier,
+            "customer_name": customer,
+            "subtotal": fmt(subtotal),
+            "tax": fmt(tax),
+            "total": fmt(total),
+            "currency": currency,
+        },
     }
 
 
@@ -234,6 +246,16 @@ def _make_pdf_template_B(
             }
             for it in line_items
         ],
+        "printed": {
+            "invoice_number": inv_number,
+            "invoice_date": inv_date,
+            "supplier_name": supplier,
+            "customer_name": customer,
+            "subtotal": fmt(subtotal),
+            "tax": fmt(tax),
+            "total": fmt(total),
+            "currency": currency,
+        },
     }
 
 
@@ -324,6 +346,16 @@ def _make_pdf_template_C(
             }
             for it in line_items
         ],
+        "printed": {
+            "invoice_number": inv_number,
+            "invoice_date": inv_date,
+            "supplier_name": supplier,
+            "customer_name": customer,
+            "subtotal": fmt(subtotal),
+            "tax": fmt(tax),
+            "total": fmt(total),
+            "currency": currency,
+        },
     }
 
 
@@ -704,6 +736,356 @@ def _make_edge_zipbomb_xlsx(path: Path, unzipped_mb: int = 5) -> None:
     path.write_bytes(buf.getvalue())
 
 
+# ------------------------------------------------------------------ M3 PDF triage / text fixtures
+
+
+def _make_scanned_pdf(path: Path, n_pages: int = 3) -> None:
+    """PDF with n_pages full-page raster images, no text layer."""
+    img = Image.new("RGB", (612, 792), color=(255, 255, 255))
+    buf = io.BytesIO()
+    img.save(buf, "PNG")
+    img_bytes = buf.getvalue()
+
+    doc = fitz.open()
+    for _ in range(n_pages):
+        page = doc.new_page(width=612, height=792)
+        page.insert_image(fitz.Rect(0, 0, 612, 792), stream=img_bytes)
+    doc.save(str(path))
+    doc.close()
+
+
+def _make_mixed_pdf(path: Path, rng, invoice_fields: dict) -> None:
+    """5 digital pages (print all invoice fields) + 1 full-page scanned image."""
+    inv_number = invoice_fields["invoice_number"]
+    inv_date = invoice_fields["invoice_date"]
+    supplier = invoice_fields["supplier_name"]
+    customer = invoice_fields["customer_name"]
+    currency = invoice_fields["currency"]
+    subtotal_fmt = invoice_fields["printed"]["subtotal"]
+    tax_fmt = invoice_fields["printed"]["tax"]
+    total_fmt = invoice_fields["printed"]["total"]
+
+    doc = fitz.open()
+    for p in range(5):
+        page = doc.new_page(width=612, height=792)
+        y = 50
+        page.insert_text(fitz.Point(50, y), f"Invoice Number: {inv_number}", fontsize=11)
+        y += 16
+        page.insert_text(fitz.Point(50, y), f"Invoice Date: {inv_date}", fontsize=11)
+        y += 16
+        page.insert_text(fitz.Point(50, y), f"Supplier: {supplier}", fontsize=11)
+        y += 16
+        page.insert_text(fitz.Point(50, y), f"Customer: {customer}", fontsize=11)
+        y += 16
+        page.insert_text(fitz.Point(50, y), f"Currency: {currency}", fontsize=11)
+        y += 16
+        page.insert_text(fitz.Point(50, y), f"Subtotal: {subtotal_fmt}", fontsize=11)
+        y += 16
+        page.insert_text(fitz.Point(50, y), f"Tax: {tax_fmt}", fontsize=11)
+        y += 16
+        page.insert_text(fitz.Point(50, y), f"Total: {total_fmt}", fontsize=11)
+        y += 20
+        for it in invoice_fields.get("line_items", []):
+            amt_fmt = _fmt_amount_us(f"{float(it['amount']):.2f}")
+            page.insert_text(fitz.Point(50, y), f"  {it['description']}: {amt_fmt}", fontsize=9)
+            y += 12
+
+    # Page 5: scanned (full-page image)
+    img = Image.new("RGB", (612, 792), color=(245, 245, 245))
+    buf = io.BytesIO()
+    img.save(buf, "PNG")
+    img_bytes = buf.getvalue()
+    page = doc.new_page(width=612, height=792)
+    page.insert_image(fitz.Rect(0, 0, 612, 792), stream=img_bytes)
+
+    doc.save(str(path))
+    doc.close()
+
+
+def _make_garbled_cid_pdf(path: Path) -> None:
+    """PDF whose text layer is made of literal (cid:N) fragments."""
+    doc = fitz.open()
+    page = doc.new_page(width=612, height=792)
+    text = " ".join(f"(cid:{i})" for i in range(1, 60))
+    page.insert_text(fitz.Point(50, 100), text, fontsize=10)
+    doc.save(str(path))
+    doc.close()
+
+
+def _garbled_ratio_check(text: str) -> float:
+    """Inline copy of _garbled_ratio for use in the self-check (avoids import cycle)."""
+    if not text:
+        return 0.0
+    cleaned = re.sub(r"\(cid:\d+\)", "�", text)
+    bad = sum(
+        1 for c in cleaned
+        if c == "�"
+        or ("" <= c <= "")
+        or (ord(c) < 32 and c not in "\n\r\t")
+    )
+    return bad / len(cleaned) if cleaned else 0.0
+
+
+def _make_garbled_pua_pdf(path: Path) -> bool:
+    """Create a CIDFontType2+Identity-H PDF with no ToUnicode.
+    Self-checks: extracted text >= 80 chars AND garbled_ratio > 0.20.
+    Returns True if written; False if self-check fails (file is deleted)."""
+    hex_glyphs = "".join(f"{i:04x}" for i in range(1, 51))
+    content_stream = f"BT /F1 12 Tf 50 700 Td <{hex_glyphs}> Tj ET\n"
+    content_bytes = content_stream.encode("latin-1")
+    clen = len(content_bytes)
+
+    # Build PDF objects as byte strings
+    def obj(oid: int, body: bytes) -> bytes:
+        return f"{oid} 0 obj\n".encode() + body + b"\nendobj\n"
+
+    o1 = obj(1, b"<< /Type /Catalog /Pages 2 0 R >>")
+    o2 = obj(2, b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>")
+    o3 = obj(3, (
+        b"<< /Type /Page /Parent 2 0 R "
+        b"/MediaBox [0 0 612 792] "
+        b"/Contents 4 0 R "
+        b"/Resources << /Font << /F1 5 0 R >> >> >>"
+    ))
+    stream_body = (
+        f"<< /Length {clen} >>\nstream\n".encode("latin-1")
+        + content_bytes
+        + b"\nendstream"
+    )
+    o4 = obj(4, stream_body)
+    o5 = obj(5, (
+        b"<< /Type /Font /Subtype /Type0 "
+        b"/BaseFont /Helvetica "
+        b"/Encoding /Identity-H "
+        b"/DescendantFonts [6 0 R] >>"
+    ))
+    o6 = obj(6, (
+        b"<< /Type /Font /Subtype /CIDFontType2 "
+        b"/BaseFont /Helvetica "
+        b"/CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >> "
+        b"/DW 600 >>"
+    ))
+
+    header = b"%PDF-1.4\n"
+    parts = [header, o1, o2, o3, o4, o5, o6]
+    offsets: list[int] = []
+    pos = len(header)
+    for p in [o1, o2, o3, o4, o5, o6]:
+        offsets.append(pos)
+        pos += len(p)
+
+    xref_pos = pos
+    xref = b"xref\n0 7\n0000000000 65535 f \n"
+    for off in offsets:
+        xref += f"{off:010d} 00000 n \n".encode()
+    trailer = (
+        b"trailer\n<< /Size 7 /Root 1 0 R >>\n"
+        b"startxref\n"
+        + f"{xref_pos}\n".encode()
+        + b"%%EOF\n"
+    )
+
+    pdf_bytes = b"".join(parts) + xref + trailer
+    path.write_bytes(pdf_bytes)
+
+    try:
+        with fitz.open(str(path)) as doc:
+            t = doc[0].get_text().strip()
+            ratio = _garbled_ratio_check(t)
+            ok = len(t) >= 80 and ratio > 0.20
+    except Exception:
+        ok = False
+
+    if not ok:
+        path.unlink(missing_ok=True)
+        warnings.warn("garbled_pua self-check failed; fixture skipped")
+        return False
+    return True
+
+
+def _make_blank_page_pdf(path: Path) -> None:
+    """PDF with a single blank page and no content."""
+    doc = fitz.open()
+    doc.new_page(width=612, height=792)
+    doc.save(str(path))
+    doc.close()
+
+
+def _make_scan_with_pagenum_pdf(path: Path) -> None:
+    """Full-page image (img_cover > 0.85) + 80-120 chars stray text. Rule 3 fires."""
+    img = Image.new("RGB", (612, 792), color=(240, 240, 240))
+    buf = io.BytesIO()
+    img.save(buf, "PNG")
+    img_bytes = buf.getvalue()
+
+    doc = fitz.open()
+    page = doc.new_page(width=612, height=792)
+    # Rect(11,11,601,781): area=590*770=454300; page=612*792=484704; ratio≈0.937
+    page.insert_image(fitz.Rect(11, 11, 601, 781), stream=img_bytes)
+    # 80-120 chars: bypasses PAGE_MIN_CHARS(50), stays under SCAN_TEXT_MAX_CHARS(200)
+    label = "Page 1  " * 12  # 96 chars
+    page.insert_text(fitz.Point(50, 790), label, fontsize=8)
+    doc.save(str(path))
+    doc.close()
+
+
+def _make_scan_with_pagenum_short_pdf(path: Path) -> None:
+    """Full-page image + 3-char page number. Rule 1 (chars < PAGE_MIN_CHARS) fires."""
+    img = Image.new("RGB", (612, 792), color=(240, 240, 240))
+    buf = io.BytesIO()
+    img.save(buf, "PNG")
+    img_bytes = buf.getvalue()
+
+    doc = fitz.open()
+    page = doc.new_page(width=612, height=792)
+    page.insert_image(fitz.Rect(11, 11, 601, 781), stream=img_bytes)
+    page.insert_text(fitz.Point(50, 790), "123", fontsize=8)
+    doc.save(str(path))
+    doc.close()
+
+
+def _make_borderless_table_pdf(path: Path, rng, line_items: list[dict]) -> dict:
+    """Text-only 15-item table, no vector strokes. GT invoice with printed block."""
+    inv_number = "INV-BT-001"
+    inv_date = "2026-10-25"
+    supplier = "Borderless Corp"
+    customer = "Table Client Ltd"
+    currency = "USD"
+    tax_rate = 10
+
+    subtotal = sum(it["quantity"] * it["unit_price"] for it in line_items)
+    tax = subtotal * tax_rate / 100
+    total = subtotal + tax
+
+    def fmt(v):
+        return _fmt_amount_us(f"{v:.2f}")
+
+    def _dstr(v):
+        return f"{v:.2f}"
+
+    doc = fitz.open()
+    page = doc.new_page(width=612, height=792)
+
+    y = 50
+    page.insert_text(fitz.Point(50, y), f"Invoice: {inv_number}  Date: {inv_date}", fontsize=10)
+    y += 18
+    page.insert_text(fitz.Point(50, y), f"Supplier: {supplier}  Customer: {customer}  Currency: {currency}", fontsize=10)
+    y += 25
+
+    # Column header (plain text, no strokes)
+    page.insert_text(fitz.Point(50, y), "Description", fontsize=9)
+    page.insert_text(fitz.Point(260, y), "Qty", fontsize=9)
+    page.insert_text(fitz.Point(320, y), "Unit Price", fontsize=9)
+    page.insert_text(fitz.Point(430, y), "Amount", fontsize=9)
+    y += 14
+
+    for it in line_items:
+        amt = it["quantity"] * it["unit_price"]
+        page.insert_text(fitz.Point(50, y), it["description"], fontsize=9)
+        page.insert_text(fitz.Point(260, y), str(it["quantity"]), fontsize=9)
+        page.insert_text(fitz.Point(320, y), fmt(it["unit_price"]), fontsize=9)
+        page.insert_text(fitz.Point(430, y), fmt(amt), fontsize=9)
+        y += 14
+
+    y += 4
+    page.insert_text(fitz.Point(320, y), "Subtotal:", fontsize=9)
+    page.insert_text(fitz.Point(430, y), fmt(subtotal), fontsize=9)
+    y += 14
+    page.insert_text(fitz.Point(320, y), f"Tax {tax_rate}%:", fontsize=9)
+    page.insert_text(fitz.Point(430, y), fmt(tax), fontsize=9)
+    y += 14
+    page.insert_text(fitz.Point(320, y), "Total:", fontsize=9)
+    page.insert_text(fitz.Point(430, y), fmt(total), fontsize=9)
+
+    doc.save(str(path))
+    doc.close()
+
+    return {
+        "invoice_number": inv_number,
+        "invoice_date": inv_date,
+        "supplier_name": supplier,
+        "customer_name": customer,
+        "subtotal": _dstr(subtotal),
+        "tax": _dstr(tax),
+        "total": _dstr(total),
+        "currency": currency,
+        "line_items": [
+            {
+                "description": it["description"],
+                "quantity": str(it["quantity"]),
+                "unit_price": _dstr(it["unit_price"]),
+                "amount": _dstr(it["quantity"] * it["unit_price"]),
+            }
+            for it in line_items
+        ],
+        "printed": {
+            "invoice_number": inv_number,
+            "invoice_date": inv_date,
+            "supplier_name": supplier,
+            "customer_name": customer,
+            "subtotal": fmt(subtotal),
+            "tax": fmt(tax),
+            "total": fmt(total),
+            "currency": currency,
+        },
+    }
+
+
+def _make_two_column_pdf(path: Path, invoice_fields: dict) -> dict:
+    """Two-column layout: invoice header at x≈50 (LEFT_COL), totals at x≈330 (RIGHT_COL)."""
+    inv_number = invoice_fields["invoice_number"]
+    inv_date = invoice_fields["invoice_date"]
+    supplier = invoice_fields["supplier_name"]
+    customer = invoice_fields["customer_name"]
+    currency = invoice_fields["currency"]
+    subtotal_fmt = invoice_fields["printed"]["subtotal"]
+    tax_fmt = invoice_fields["printed"]["tax"]
+    total_fmt = invoice_fields["printed"]["total"]
+
+    doc = fitz.open()
+    page = doc.new_page(width=612, height=792)
+
+    # Left column
+    y = 100
+    page.insert_text(fitz.Point(50, y), "LEFT_COL", fontsize=10)
+    y += 18
+    page.insert_text(fitz.Point(50, y), f"Invoice: {inv_number}", fontsize=10)
+    y += 15
+    page.insert_text(fitz.Point(50, y), f"Date: {inv_date}", fontsize=10)
+    y += 15
+    page.insert_text(fitz.Point(50, y), f"Supplier: {supplier}", fontsize=10)
+    y += 15
+    page.insert_text(fitz.Point(50, y), f"Customer: {customer}", fontsize=10)
+
+    # Right column
+    y = 100
+    page.insert_text(fitz.Point(330, y), "RIGHT_COL", fontsize=10)
+    y += 18
+    page.insert_text(fitz.Point(330, y), f"Currency: {currency}", fontsize=10)
+    y += 15
+    page.insert_text(fitz.Point(330, y), f"Subtotal: {subtotal_fmt}", fontsize=10)
+    y += 15
+    page.insert_text(fitz.Point(330, y), f"Tax: {tax_fmt}", fontsize=10)
+    y += 15
+    page.insert_text(fitz.Point(330, y), f"Total: {total_fmt}", fontsize=10)
+
+    doc.save(str(path))
+    doc.close()
+
+    return {
+        "invoice_number": inv_number,
+        "invoice_date": inv_date,
+        "supplier_name": supplier,
+        "customer_name": customer,
+        "subtotal": invoice_fields["subtotal"],
+        "tax": invoice_fields["tax"],
+        "total": invoice_fields["total"],
+        "currency": currency,
+        "line_items": [],
+        "printed": invoice_fields["printed"],
+    }
+
+
 # ------------------------------------------------------------------ invoice data generation
 
 def _gen_items(r, n: int) -> list[dict]:
@@ -896,6 +1278,121 @@ def generate_fixtures(out_dir: Path, seed: int = 42) -> list[dict]:
     )
     gt.append({"file": fname, "group": "csv", "expect_status": "validated_ok",
                "injected": None, "invoices": [inv]})
+
+    # ---- M3 triage + text fixtures ----
+
+    # scanned.pdf
+    _make_scanned_pdf(out_dir / "scanned.pdf", n_pages=3)
+    gt.append({"file": "scanned.pdf", "group": "triage", "eval": False,
+               "expect_status": "needs_review", "injected": None, "invoices": []})
+
+    # mixed.pdf — 5 digital pages + 1 scanned; use template A fields
+    _mixed_items = _gen_items(r, r.randint(2, 4))
+    _mixed_sub = sum(it["quantity"] * it["unit_price"] for it in _mixed_items)
+    _mixed_tax_rate = 10
+    _mixed_tax = _mixed_sub * _mixed_tax_rate / 100
+    _mixed_total = _mixed_sub + _mixed_tax
+    def _dstr(v): return f"{v:.2f}"
+    _mixed_supplier = fake.company()
+    _mixed_customer = fake.company()
+    _mixed_inv = {
+        "invoice_number": f"INV-MIX-{seed}-0001",
+        "invoice_date": "2026-10-22",
+        "supplier_name": _mixed_supplier,
+        "customer_name": _mixed_customer,
+        "subtotal": _dstr(_mixed_sub),
+        "tax": _dstr(_mixed_tax),
+        "total": _dstr(_mixed_total),
+        "currency": "USD",
+        "line_items": [
+            {
+                "description": it["description"],
+                "quantity": str(it["quantity"]),
+                "unit_price": _dstr(it["unit_price"]),
+                "amount": _dstr(it["quantity"] * it["unit_price"]),
+            }
+            for it in _mixed_items
+        ],
+        "printed": {
+            "invoice_number": f"INV-MIX-{seed}-0001",
+            "invoice_date": "2026-10-22",
+            "supplier_name": _mixed_supplier,
+            "customer_name": _mixed_customer,
+            "subtotal": _fmt_amount_us(_dstr(_mixed_sub)),
+            "tax": _fmt_amount_us(_dstr(_mixed_tax)),
+            "total": _fmt_amount_us(_dstr(_mixed_total)),
+            "currency": "USD",
+        },
+    }
+    _make_mixed_pdf(out_dir / "mixed.pdf", r, _mixed_inv)
+    gt.append({"file": "mixed.pdf", "group": "triage", "eval": True,
+               "expect_status": "validated_ok", "injected": None,
+               "invoices": [_mixed_inv]})
+
+    # garbled_cid.pdf
+    _make_garbled_cid_pdf(out_dir / "garbled_cid.pdf")
+    gt.append({"file": "garbled_cid.pdf", "group": "triage", "eval": False,
+               "expect_status": "needs_review", "injected": None, "invoices": []})
+
+    # garbled_pua.pdf (conditional: only if self-check passes)
+    _pua_written = _make_garbled_pua_pdf(out_dir / "garbled_pua.pdf")
+    if _pua_written:
+        gt.append({"file": "garbled_pua.pdf", "group": "triage", "eval": False,
+                   "expect_status": "needs_review", "injected": None, "invoices": []})
+
+    # blank_page.pdf
+    _make_blank_page_pdf(out_dir / "blank_page.pdf")
+    gt.append({"file": "blank_page.pdf", "group": "triage", "eval": False,
+               "expect_status": "needs_review", "injected": None, "invoices": []})
+
+    # scan_with_pagenum.pdf (rule 3: img_cover > 0.85, chars in [50, 200))
+    _make_scan_with_pagenum_pdf(out_dir / "scan_with_pagenum.pdf")
+    gt.append({"file": "scan_with_pagenum.pdf", "group": "triage", "eval": False,
+               "expect_status": "needs_review", "injected": None, "invoices": []})
+
+    # scan_with_pagenum_short.pdf (rule 1: chars < 50)
+    _make_scan_with_pagenum_short_pdf(out_dir / "scan_with_pagenum_short.pdf")
+    gt.append({"file": "scan_with_pagenum_short.pdf", "group": "triage", "eval": False,
+               "expect_status": "needs_review", "injected": None, "invoices": []})
+
+    # borderless_table.pdf
+    _bt_items = _gen_items(r, 15)
+    _bt_inv = _make_borderless_table_pdf(out_dir / "borderless_table.pdf", r, _bt_items)
+    gt.append({"file": "borderless_table.pdf", "group": "triage", "eval": True,
+               "expect_status": "validated_ok", "injected": None,
+               "invoices": [_bt_inv]})
+
+    # two_column.pdf
+    _tc_items = _gen_items(r, 3)
+    _tc_sub = sum(it["quantity"] * it["unit_price"] for it in _tc_items)
+    _tc_tax = _tc_sub * 0.15
+    _tc_total = _tc_sub + _tc_tax
+    _tc_supplier = fake.company()
+    _tc_customer = fake.company()
+    _tc_fields = {
+        "invoice_number": f"INV-TC-{seed}-0001",
+        "invoice_date": "2026-10-23",
+        "supplier_name": _tc_supplier,
+        "customer_name": _tc_customer,
+        "subtotal": _dstr(_tc_sub),
+        "tax": _dstr(_tc_tax),
+        "total": _dstr(_tc_total),
+        "currency": "GBP",
+        "printed": {
+            "invoice_number": f"INV-TC-{seed}-0001",
+            "invoice_date": "2026-10-23",
+            "supplier_name": _tc_supplier,
+            "customer_name": _tc_customer,
+            "subtotal": _fmt_amount_us(_dstr(_tc_sub)),
+            "tax": _fmt_amount_us(_dstr(_tc_tax)),
+            "total": _fmt_amount_us(_dstr(_tc_total)),
+            "currency": "GBP",
+        },
+    }
+    _tc_inv = _make_two_column_pdf(out_dir / "two_column.pdf", _tc_fields)
+    gt.append({"file": "two_column.pdf", "group": "triage", "eval": True,
+               "expect_status": "validated_ok", "injected": None,
+               "invoices": [_tc_inv]})
 
     # ---- bad files ----
     _make_bad_truncated_pdf(out_dir / "bad_truncated.pdf")

@@ -51,6 +51,7 @@ class State(TypedDict, total=False):
     # --- acquisition: PDF
     digital_pages: list[int]
     scanned_pages: list[int]
+    page_labels: dict[int, str]       # M3: per-page triage label: digital | scanned | garbled
     page_text: dict[int, str]
     page_source: dict[int, str]     # Fix 9: digital|ocr|vision|sheet per page
     page_images: list[str]          # Fix 9: file paths (never bytes)

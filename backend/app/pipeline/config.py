@@ -32,6 +32,10 @@ class Config:
     # --- pdf_triage
     PAGE_MIN_CHARS: int = 50
     GARBLED_RATIO_MAX: float = 0.20
+    IMG_COVER_MAX: float = 0.85
+    SCAN_TEXT_MAX_CHARS: int = 200
+    TABULAR_MIN_LINES: int = 6
+    TABULAR_MIN_NUMERIC_TOKENS: int = 2
 
     # --- image_prep / ocr
     OCR_DPI: int = 250
@@ -84,6 +88,10 @@ def get_config() -> Config:
         MAX_UNZIPPED_MB=_env_int("MAX_UNZIPPED_MB", 200),
         PAGE_MIN_CHARS=_env_int("PAGE_MIN_CHARS", 50),
         GARBLED_RATIO_MAX=_env_float("GARBLED_RATIO_MAX", 0.20),
+        IMG_COVER_MAX=_env_float("IMG_COVER_MAX", 0.85),
+        SCAN_TEXT_MAX_CHARS=_env_int("SCAN_TEXT_MAX_CHARS", 200),
+        TABULAR_MIN_LINES=_env_int("TABULAR_MIN_LINES", 6),
+        TABULAR_MIN_NUMERIC_TOKENS=_env_int("TABULAR_MIN_NUMERIC_TOKENS", 2),
         OCR_DPI=_env_int("OCR_DPI", 250),
         OCR_MAX_SIDE_PX=_env_int("OCR_MAX_SIDE_PX", 3500),
         BLUR_VAR_MIN=_env_float("BLUR_VAR_MIN", 60.0),

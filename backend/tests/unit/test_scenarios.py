@@ -7,6 +7,8 @@ Each scenario maps to a fixture file via the session-scoped `fx` dict in conftes
 """
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from app.pipeline.graph import process, _default_deps
@@ -23,7 +25,7 @@ SCENARIOS = [
      "image", {}, DocStatus.validated_ok, None),
 
     ("mixed PDF + low-conf OCR unit",
-     "pdf", {"scanned_pages": [2], "units": 2, "low_conf_units": [1]},
+     "mixed", {"units": 2, "low_conf_units": [1]},
      DocStatus.validated_ok, None),
 
     ("arith error fixed by vision",
@@ -64,9 +66,13 @@ SCENARIOS = [
     SCENARIOS,
     ids=[s[0] for s in SCENARIOS],
 )
-def test_scenario(label, file_key, sim, expected_status, assert_no_node, fx):
+def test_scenario(label, file_key, sim, expected_status, assert_no_node, fx, gt):
     file_path = str(fx[file_key])
-    result = process(file_path, deps=_default_deps(), _sim=sim)
+    filename = Path(file_path).name
+    full_sim = {**sim, "gt_invoices": {
+        filename: (gt.get(filename) or {}).get("invoices", [])
+    }}
+    result = process(file_path, deps=_default_deps(), _sim=full_sim)
     assert result.status == expected_status, (
         f"[{label}] expected {expected_status!r}, got {result.status!r}\n"
         f"history: {[h['node'] for h in result.history]}"
