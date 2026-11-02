@@ -10,7 +10,7 @@ If behind: cut in this order: frontend polish -> search filters -> API rate limi
 ## Milestones
 - [x] **M0 Scaffold (30-45 min).** Repo layout from docs/01; copy `reference/graph_skeleton/` into `backend/app/pipeline/` and split into `state.py / routers.py / nodes/ / graph.py`; apply `docs/00-skeleton-review.md` items 1-13; `schemas/`, `config.py`, `utils/` stubs, `tests/fakes.py` (`FakeLLM`), `test_architecture.py`; the 12 dry-run scenarios still pass (+ the new sheet-no-vision case).
   *Accept:* `pytest` green, graph image regenerates. Docs: 00, 01, 02, 03.
-- [ ] **M1 Pure logic (60-75 min).** `utils/money.py, dates.py, text_norm.py, hashing.py`; `validation/*`; `validate` node. *Accept:* every test row in docs/04 passes; no `float`. Docs: 04, nodes/validate.
+- [x] **M1 Pure logic (60-75 min).** `utils/money.py, dates.py, text_norm.py, hashing.py`; `validation/*`; `validate` node. *Accept:* every test row in docs/04 passes; no `float`. Docs: 04, nodes/validate.
 - [ ] **M2 Fixtures v0 + intake/fail (45 min).** `generate_fixtures.py` producing the small set (digital A/B, multi-page C, xlsx/csv, bad files) with ground truth; `intake`, `fail`. *Accept:* intake T1-T10. Docs: 05, nodes/intake, nodes/fail.
 - [ ] **M3 PDF path (45 min).** `pdf_triage`, `pdf_text`. *Accept:* tests green; line items of clean fixtures reconstructable from tables. Docs: nodes/pdf_triage, pdf_text.
 - [ ] **M4 Sheet path (75 min).** `sheet_load, sheet_classify, sheet_map, sheet_transform` with `FakeLLM` first, synonyms table. *Accept:* sheet tests + perf test numbers noted. Docs: nodes/sheet_*.

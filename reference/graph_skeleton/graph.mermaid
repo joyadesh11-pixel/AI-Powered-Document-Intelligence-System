@@ -1,0 +1,50 @@
+---
+config:
+  flowchart:
+    curve: linear
+---
+graph TD;
+	__start__([<p>__start__</p>]):::first
+	intake(intake)
+	pdf_triage(pdf_triage)
+	pdf_text(pdf_text)
+	image_prep(image_prep)
+	ocr(ocr)
+	sheet_load(sheet_load)
+	sheet_classify(sheet_classify)
+	sheet_map(sheet_map)
+	sheet_transform(sheet_transform)
+	segment(segment)
+	llm_extract(llm_extract)
+	validate(validate)
+	vision_extract(vision_extract)
+	finalize(finalize)
+	fail(fail)
+	__end__([<p>__end__</p>]):::last
+	__start__ --> intake;
+	image_prep --> ocr;
+	intake -.-> fail;
+	intake -.-> image_prep;
+	intake -.-> pdf_triage;
+	intake -.-> sheet_load;
+	llm_extract --> validate;
+	ocr --> segment;
+	pdf_text -.-> image_prep;
+	pdf_text -.-> segment;
+	pdf_triage --> pdf_text;
+	segment --> llm_extract;
+	sheet_classify -.-> segment;
+	sheet_classify -.-> sheet_map;
+	sheet_load --> sheet_classify;
+	sheet_map --> sheet_transform;
+	sheet_transform -.-> finalize;
+	sheet_transform -.-> sheet_map;
+	sheet_transform -.-> validate;
+	validate -.-> finalize;
+	validate -.-> vision_extract;
+	vision_extract --> validate;
+	fail --> __end__;
+	finalize --> __end__;
+	classDef default fill:#f2f0ff,line-height:1.2
+	classDef first fill-opacity:0
+	classDef last fill:#bfb6fc

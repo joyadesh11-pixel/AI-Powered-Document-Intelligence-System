@@ -1,0 +1,53 @@
+# --- secrets ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials.json
+service-account*.json
+
+# --- python ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+coverage.xml
+
+# --- node / next ---
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+npm-debug.log*
+
+# --- runtime data (regenerable) ---
+data/uploads/
+data/fixtures/
+data/tmp/
+*.log
+celerybeat-schedule*
+dump.rdb
+pgdata/
+.docker-data/
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# --- Claude Code local overrides (settings.json IS committed) ---
+.claude/settings.local.json
+CLAUDE.local.md
+
+# --- keep these (deliverables) ---
+# eval/ground_truth.json, eval/reports/, docs/, reference/, graph.png

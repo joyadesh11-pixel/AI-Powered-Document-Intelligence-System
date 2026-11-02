@@ -21,9 +21,14 @@ _STATUS_RANK = {
 }
 
 
-def _invoice_status(unit: int | None, val_errors: list[dict]) -> str:
+def _invoice_status(inv: dict, val_errors: list[dict]) -> str:
+    # Prefer status written directly by the validate node; fall back to val_errors scan.
+    direct = inv.get("status")
+    if direct is not None:
+        return direct
+    unit_id = inv.get("unit_id")
     for e in val_errors:
-        if e.get("unit") == unit and e.get("severity") == Severity.error.value:
+        if e.get("unit_id") == unit_id and e.get("severity") == Severity.error.value:
             return InvoiceStatus.needs_review.value
     return InvoiceStatus.validated_ok.value
 
@@ -47,7 +52,7 @@ def finalize(s: State) -> dict:
 
     invoice_statuses: list[str] = []
     for inv in raw_invoices:
-        ist = _invoice_status(inv.get("unit"), val_errors)
+        ist = _invoice_status(inv, val_errors)
         invoice_statuses.append(ist)
 
     doc_status: str

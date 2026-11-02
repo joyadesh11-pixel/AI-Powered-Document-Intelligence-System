@@ -19,7 +19,7 @@ Tolerance base `TOL_ABS = Decimal("0.01")`. All arithmetic in `Decimal`; compare
 | ARITH_SUBTOTAL | error | `sum(line.amount)` vs `subtotal` (needs >= 1 line with amount) | `max(0.01, 0.005 * n_lines)` | yes |
 | ARITH_TOTAL | error | `subtotal + tax` vs `total`; if `subtotal` null: `lines_sum + tax` vs `total` | `0.01`; if `tax` null treat as skipped (info) | yes |
 | LINES_MISSING | warning | no line items | - | no |
-| NOT_GROUNDED | error (parser) / warning (ocr) / skipped (vision, sheet) | value not found in source text | see below | yes (when error) |
+| NOT_GROUNDED | error (parser) / warning (ocr) / skipped (vision, sheet) | value not found in source text | see below | yes (error tier only) |
 | DUPLICATE_INVOICE | error | key seen in store or earlier in same file | key below | no |
 | UNCERTAIN_FIELD | warning | model listed field in `uncertain_fields` | - | no |
 | LOW_OCR_CONF / LOW_IMAGE_QUALITY | warning | from `ocr` / `image_prep` | - | handled at unit level |
@@ -29,7 +29,7 @@ Tolerance base `TOL_ABS = Decimal("0.01")`. All arithmetic in `Decimal`; compare
 | SHEET_GROUP_INCONSISTENT, SHEET_SKIPPED, FORMULA_NO_CACHE, TRUNCATED_IMAGE, VISION_PAGES_CAPPED | warning | produced by nodes | - | no |
 | EXT_MISMATCH, SEGMENT_FALLBACK | info | produced by nodes | - | no |
 
-`ESCALATION_CODES` = the "yes" rows. A missing invoice number that is truly absent costs one vision call and still ends `needs_review`; acceptable.
+`ESCALATION_CODES` = the "yes" rows. A missing invoice number that is truly absent costs one vision call and still ends `needs_review`; acceptable. Escalation counts **error-severity** issues only. `NOT_GROUNDED` at OCR tier produces a **warning** and does not trigger escalation even though its code appears in the escalation column.
 
 ## Grounding (hallucination guard)
 Applies to header fields when the source text came from the parser (error) or OCR (warning).
@@ -60,6 +60,8 @@ Upper-case ISO 4217 from a bundled list. Symbol-only (`$`, `£`) is not accepted
 
 ## Duplicate key
 `casefold(strip(supplier_name)) + "|" + re.sub(r"[^A-Z0-9]", "", invoice_number.upper()) + "|" + str(total.quantize(Decimal("0.01")))`. Any null part -> no duplicate check. The DB has a partial unique index on this key for invoices not `failed`; services re-check at persist time (race between concurrent uploads).
+
+**Corrected fields (M8).** Fields a human corrected via PATCH skip the grounding check. The `dup_key` is recomputed on PATCH using the corrected field values.
 
 ## Output contract
 `Issue(code, severity, field, expected, got, message, location)`. `expected/got` are strings (`"100.00"`, `"90.00"`); message is human-readable, e.g. `Total 100.00 does not match subtotal + tax 90.00 + 5.00 = 95.00 (diff 5.00)`.

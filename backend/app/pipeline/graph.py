@@ -35,7 +35,7 @@ from app.pipeline.nodes.sheet_map import sheet_map
 from app.pipeline.nodes.sheet_transform import sheet_transform
 from app.pipeline.nodes.segment import segment
 from app.pipeline.nodes.llm_extract import llm_extract
-from app.pipeline.nodes.validate import validate
+from app.pipeline.nodes.validate import make_validate
 from app.pipeline.nodes.vision_extract import vision_extract
 from app.pipeline.nodes.finalize import finalize
 from app.pipeline.nodes.fail import fail
@@ -62,6 +62,8 @@ def build_graph(deps: Deps | None = None):
     cfg: Config = (deps or {}).get("config") or get_config()
 
     g = StateGraph(State)
+
+    validate = make_validate(deps)
 
     # register nodes
     for name, fn in [

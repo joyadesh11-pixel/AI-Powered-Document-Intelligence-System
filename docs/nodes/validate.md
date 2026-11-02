@@ -3,7 +3,7 @@
 **Reads** `invoices`, `page_text`, `page_source`, `deps.seen_store`, `escalated`, `file_type`. **Writes** `invoices[*].issues`, `invoices[*].status`, `validation_errors` (flat list with invoice index), `vision_queue`.
 ## Algorithm
 1. For each invoice run rules in order: completeness, formats/dates/currency, arithmetic, grounding, duplicates.
-2. Duplicates: key = `casefold(supplier) | normalised(invoice_number) | total`; skip if any part is null. Lookup `seen_store.contains(key)` (read-only; the **caller** adds after persisting) and compare within the same file (second occurrence flagged).
+2. Duplicates: key = `casefold(supplier) | normalised(invoice_number) | total`; skip if any part is null. Lookup `seen_store.contains(key, exclude_hash=file_hash)` (read-only; the **caller** adds after persisting) so a reprocessed document never matches itself. Also compare within the same file (second occurrence flagged).
 3. Invoice status = `needs_review` if any error-severity issue, else `validated_ok`.
 4. **Escalation set:** units whose invoices have an issue in `ESCALATION_CODES` (docs/04) AND `tier in {parser, ocr}` AND `file_type != "sheet"` AND `not escalated`. Written to `vision_queue`. `route_after_validate` goes to `vision_extract` iff the queue is non-empty and `not escalated`.
 5. Second pass (after vision): same rules; no new queue entries.
