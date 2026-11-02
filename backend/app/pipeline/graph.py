@@ -31,7 +31,7 @@ from app.pipeline.nodes.image_prep import image_prep
 from app.pipeline.nodes.ocr import ocr
 from app.pipeline.nodes.sheet_load import sheet_load
 from app.pipeline.nodes.sheet_classify import sheet_classify
-from app.pipeline.nodes.sheet_map import sheet_map
+from app.pipeline.nodes.sheet_map import make_sheet_map
 from app.pipeline.nodes.sheet_transform import sheet_transform
 from app.pipeline.nodes.segment import segment
 from app.pipeline.nodes.llm_extract import llm_extract
@@ -65,6 +65,7 @@ def build_graph(deps: Deps | None = None):
 
     validate = make_validate(deps)
     intake = make_intake(deps)
+    sheet_map = make_sheet_map(deps)
 
     # register nodes
     for name, fn in [

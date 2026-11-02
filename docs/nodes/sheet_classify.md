@@ -13,3 +13,17 @@
 - T3 `csv_freeform` -> freeform. T4 `xlsx_2sheets_one_tabular_one_note` -> tabular + `SHEET_SKIPPED`.
 - T5 5,000-row sheet -> tabular. T6 tiny 4-row tabular list -> tabular.
 **Done when** T1-T6 pass.
+
+## Amendment: 2-column sheet classification
+The original `< 3 data columns → score 0.0` guard was over-broad: it forced any 2-column
+tabular sheet (e.g. "Invoice Number" + "Amount") to be classified as freeform.
+
+**Revised rule** (implemented in M4 verification pass):
+- 1 data column → 0.0 (always freeform)
+- 2 data columns AND second column numeric ratio **< 60%** → 0.0 (label-value format)
+- 2 data columns AND second column numeric ratio **≥ 60%** → score normally (tabular)
+- ≥ 3 data columns → score normally
+
+Rationale: a genuine label-value CSV (rows like "Invoice Number" / "INV-001", "Total" / "110.00")
+has a mixed-type second column (~40% numeric). A 2-column tabular invoice sheet (invoice IDs +
+amounts) has a ≥ 60% numeric second column and must not be misclassified.

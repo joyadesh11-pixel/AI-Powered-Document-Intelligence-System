@@ -32,6 +32,8 @@ class FakeLLM:
             "schema": schema.__name__ if hasattr(schema, "__name__") else str(schema),
             "model": model,
             "has_images": images is not None,
+            "system": system,
+            "user": user,
         })
         if not self.responses:
             raise IndexError("FakeLLM response queue exhausted")

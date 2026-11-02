@@ -27,6 +27,8 @@ def route_after_classify(s: State) -> str:
 
 
 def route_after_transform(s: State, cfg: Config) -> str:
+    if s.get("error"):
+        return "finalize"
     if s.get("parse_ok"):
         return "validate"
     # Fix 11: MAPPING_MAX_RETRIES = 1 means exactly one retry is allowed.

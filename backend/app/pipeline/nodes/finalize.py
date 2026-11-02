@@ -60,12 +60,20 @@ def finalize(s: State) -> dict:
 
     if not raw_invoices:
         doc_status = DocStatus.needs_review.value
-        extra_warnings.append({
-            "code": IssueCode.NO_INVOICE_DETECTED.value,
-            "severity": Severity.warning.value,
-            "message": "No invoice detected in document",
-            "field": None, "expected": None, "got": None, "location": {},
-        })
+        if s.get("parse_ok") is False:
+            extra_warnings.append({
+                "code": IssueCode.MAPPING_FAILED.value,
+                "severity": Severity.error.value,
+                "message": "Sheet column mapping exhausted — no invoices extracted",
+                "field": None, "expected": None, "got": None, "location": {},
+            })
+        else:
+            extra_warnings.append({
+                "code": IssueCode.NO_INVOICE_DETECTED.value,
+                "severity": Severity.warning.value,
+                "message": "No invoice detected in document",
+                "field": None, "expected": None, "got": None, "location": {},
+            })
     else:
         doc_status = _doc_status(invoice_statuses)
 

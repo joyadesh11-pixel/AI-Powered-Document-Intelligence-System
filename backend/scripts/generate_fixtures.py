@@ -1101,6 +1101,443 @@ def _gen_items(r, n: int) -> list[dict]:
     return items
 
 
+# ------------------------------------------------------------------ M4 sheet fixtures
+
+
+def _make_xlsx_simple_linegrain(path: Path, r) -> list[dict]:
+    """Standard headers, 3 invoices × 5 lines = 15 rows (+67 repeats = 202 total for classify)."""
+    import openpyxl
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Invoice"
+    headers = ["Invoice Number", "Invoice Date", "Supplier", "Customer", "Currency",
+               "Description", "Quantity", "Unit Price", "Amount", "Subtotal", "Tax", "Total"]
+    ws.append(headers)
+
+    descs = ["Consulting", "Hosting", "Support", "License", "Training",
+             "Audit", "Config", "Deploy", "Monitor", "Review"]
+    inv_data = [
+        ("INV-SL-001", "2026-10-01", "Alpha Corp", "Beta Ltd", "USD"),
+        ("INV-SL-002", "2026-10-02", "Alpha Corp", "Gamma Inc", "USD"),
+        ("INV-SL-003", "2026-10-03", "Delta LLC", "Epsilon Co", "EUR"),
+    ]
+    gt_invoices = []
+    for inv_no, inv_date, supplier, customer, currency in inv_data:
+        qty_base = 2
+        unit_price = 10
+        n_lines = 68  # ~68 lines per invoice → 204 rows total → classify as tabular
+        subtotal = qty_base * unit_price * n_lines
+        tax = subtotal // 10
+        total = subtotal + tax
+        for i in range(n_lines):
+            amt = qty_base * unit_price
+            ws.append([inv_no, inv_date, supplier, customer, currency,
+                       descs[i % len(descs)], qty_base, unit_price, amt,
+                       subtotal, tax, total])
+        items = [{"description": descs[i % len(descs)], "quantity": str(qty_base),
+                  "unit_price": f"{unit_price:.2f}", "amount": f"{qty_base * unit_price:.2f}"}
+                 for i in range(n_lines)]
+        gt_invoices.append({
+            "invoice_number": inv_no, "invoice_date": inv_date,
+            "supplier_name": supplier, "customer_name": customer,
+            "subtotal": f"{subtotal:.2f}", "tax": f"{tax:.2f}", "total": f"{total:.2f}",
+            "currency": currency, "line_items": items,
+        })
+    wb.save(str(path))
+    return gt_invoices
+
+
+def _make_xlsx_invoice_grain(path: Path, r) -> list[dict]:
+    """One row per invoice (grain=invoice), standard headers, no line items."""
+    import openpyxl
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Invoices"
+    ws.append(["Invoice Number", "Invoice Date", "Supplier", "Customer",
+               "Currency", "Subtotal", "Tax", "Total"])
+    gt_invoices = []
+    for i in range(1, 6):
+        inv_no = f"INV-IG-{i:03d}"
+        inv_date = f"2026-10-{i:02d}"
+        supplier = f"Supplier {i}"
+        customer = f"Customer {i}"
+        currency = "USD"
+        subtotal = 100 * i
+        tax = subtotal // 10
+        total = subtotal + tax
+        ws.append([inv_no, inv_date, supplier, customer, currency, subtotal, tax, total])
+        gt_invoices.append({
+            "invoice_number": inv_no, "invoice_date": inv_date,
+            "supplier_name": supplier, "customer_name": customer,
+            "subtotal": f"{subtotal:.2f}", "tax": f"{tax:.2f}", "total": f"{total:.2f}",
+            "currency": currency, "line_items": [],
+        })
+    wb.save(str(path))
+    return gt_invoices
+
+
+def _make_csv_invoice_grain(path: Path, r) -> list[dict]:
+    """CSV, one row per invoice (grain=invoice)."""
+    fields = ["Invoice Number", "Invoice Date", "Supplier", "Customer",
+              "Currency", "Subtotal", "Tax", "Total"]
+    rows = []
+    gt_invoices = []
+    for i in range(1, 5):
+        inv_no = f"INV-CIG-{i:03d}"
+        inv_date = f"2026-10-{i:02d}"
+        supplier = f"Supplier {i}"
+        customer = f"Customer {i}"
+        subtotal = 200 * i
+        tax = subtotal // 10
+        total = subtotal + tax
+        rows.append([inv_no, inv_date, supplier, customer, "USD",
+                     f"{subtotal:.2f}", f"{tax:.2f}", f"{total:.2f}"])
+        gt_invoices.append({
+            "invoice_number": inv_no, "invoice_date": inv_date,
+            "supplier_name": supplier, "customer_name": customer,
+            "subtotal": f"{subtotal:.2f}", "tax": f"{tax:.2f}", "total": f"{total:.2f}",
+            "currency": "USD", "line_items": [],
+        })
+    with open(path, "w", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        w.writerow(fields)
+        w.writerows(rows)
+    return gt_invoices
+
+
+def _make_xlsx_odd_headers(path: Path, r) -> list[dict]:
+    """Odd column names; 'Issued On' is the date col (dd/mm/yyyy, days > 12).
+    Includes Currency and Invoice Total columns so validate passes for scenario 7.
+    """
+    import openpyxl
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Sheet1"
+    # "Doc Ref"=invoice_number, "Issued On"=invoice_date, "Supplier Co"=supplier_name,
+    # "Customer"=customer_name, "Currency"=currency, "Description"=description,
+    # "Quantity"=quantity, "Unit Price"=unit_price, "Line Amt"=amount,
+    # "Invoice Total"=total (header-level repeated on every line)
+    ws.append(["Doc Ref", "Issued On", "Supplier Co", "Customer", "Currency",
+               "Description", "Quantity", "Unit Price", "Line Amt", "Invoice Total"])
+    inv_data = [
+        ("OH-001", "15/10/2026", "Widgets Inc", "Acme Corp", "USD"),
+        ("OH-002", "16/10/2026", "Widgets Inc", "Beta Ltd", "GBP"),
+    ]
+    gt_invoices = []
+    descs = ["Widget A", "Widget B", "Widget C"]
+    for inv_no, inv_date_dmy, supplier, customer, currency in inv_data:
+        n_lines = 4
+        subtotal = sum((i + 1) * 50 for i in range(n_lines))
+        for j in range(n_lines):
+            qty = j + 1
+            unit_price = 50
+            amt = qty * unit_price
+            ws.append([inv_no, inv_date_dmy, supplier, customer, currency,
+                       descs[j % len(descs)], qty, unit_price, amt, subtotal])
+        # Convert date for ground truth
+        d, m, y = inv_date_dmy.split("/")
+        gt_date = f"{y}-{m}-{d}"
+        gt_invoices.append({
+            "invoice_number": inv_no, "invoice_date": gt_date,
+            "supplier_name": supplier, "customer_name": customer,
+            "subtotal": None, "tax": None, "total": f"{subtotal:.2f}",
+            "currency": currency, "line_items": [],
+        })
+    wb.save(str(path))
+    return gt_invoices
+
+
+def _make_xlsx_ambiguous_dates(path: Path, r) -> list[dict]:
+    """All days <= 12 so %m/%d/%Y and %d/%m/%Y both parse -> ambiguous -> LLM needed."""
+    import openpyxl
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Sheet1"
+    ws.append(["Invoice Number", "Invoice Date", "Supplier", "Customer",
+               "Currency", "Description", "Quantity", "Unit Price", "Amount"])
+    for i in range(1, 6):
+        ws.append([f"INV-AD-{i:03d}", f"0{i}/0{i}/2026", "Supplier A", "Customer B",
+                   "USD", "Item", 1, 100, 100])
+    wb.save(str(path))
+    return []
+
+
+def _make_xlsx_multisheet_same_headers(path: Path, r) -> list[dict]:
+    """Two sheets with identical headers — sheet_load stacks them."""
+    import openpyxl
+    wb = openpyxl.Workbook()
+    for sheet_idx, (sheet_name, inv_no, inv_date) in enumerate([
+        ("Jan", "INV-MS-001", "2026-01-15"),
+        ("Feb", "INV-MS-002", "2026-02-15"),
+    ]):
+        if sheet_idx == 0:
+            ws = wb.active
+            ws.title = sheet_name
+        else:
+            ws = wb.create_sheet(sheet_name)
+        ws.append(["Invoice Number", "Invoice Date", "Supplier", "Customer",
+                   "Description", "Amount"])
+        for j in range(3):
+            ws.append([inv_no, inv_date, "Acme", "Beta", f"Item {j}", 100])
+    wb.save(str(path))
+    return []
+
+
+def _make_xlsx_hidden_sheet(path: Path, r) -> list[dict]:
+    """One visible sheet + one hidden sheet."""
+    import openpyxl
+    wb = openpyxl.Workbook()
+    ws_visible = wb.active
+    ws_visible.title = "Visible"
+    ws_visible.append(["Invoice Number", "Invoice Date", "Amount"])
+    ws_visible.append(["INV-HS-001", "2026-10-01", 100])
+
+    ws_hidden = wb.create_sheet("Hidden")
+    ws_hidden.sheet_state = "hidden"
+    ws_hidden.append(["Secret"])
+    ws_hidden.append(["data"])
+
+    wb.save(str(path))
+    return []
+
+
+def _make_xlsx_merged_header(path: Path, r) -> list[dict]:
+    """Merged title cell above the real header row; sheet_load still finds the header."""
+    import openpyxl
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Sheet1"
+    # Row 1: merged title
+    ws.merge_cells("A1:F1")
+    ws["A1"] = "Company Invoice Export 2026"
+    # Row 2: real header
+    ws.append(["Invoice Number", "Invoice Date", "Supplier", "Customer", "Amount", "Currency"])
+    # Row 3+: data
+    for i in range(1, 5):
+        ws.append([f"INV-MH-{i:03d}", f"2026-10-{i:02d}", "Acme", "Beta", 100 * i, "USD"])
+    wb.save(str(path))
+    return []
+
+
+def _make_xlsx_banner_rows(path: Path, r) -> list[dict]:
+    """Header on Excel row 3 (two banner rows before it)."""
+    import openpyxl
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Sheet1"
+    # Row 1: title banner
+    ws.append(["Company Invoice Report"])
+    # Row 2: date banner
+    ws.append(["Generated: 2026-10-15"])
+    # Row 3: real header (0-indexed = 2)
+    ws.append(["Invoice Number", "Invoice Date", "Supplier", "Customer", "Amount"])
+    # Row 4+: data
+    for i in range(1, 5):
+        ws.append([f"INV-BR-{i:03d}", f"2026-10-{i:02d}", "Acme", "Beta", 100 * i])
+    wb.save(str(path))
+    return []
+
+
+def _make_xlsx_formula_nocache(path: Path, r) -> list[dict]:
+    """Formula cells without cached values — triggers FORMULA_NO_CACHE."""
+    import openpyxl
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Sheet1"
+    ws.append(["Invoice Number", "Invoice Date", "Quantity", "Unit Price", "Amount"])
+    for i in range(1, 4):
+        ws.append([f"INV-FNC-{i:03d}", f"2026-10-{i:02d}", i, 50, f"=C{i+1}*D{i+1}"])
+    wb.save(str(path))
+    return []
+
+
+def _make_xlsx_2sheets_tabular_plus_note(path: Path, r) -> list[dict]:
+    """Primary tabular sheet + secondary note/text sheet."""
+    import openpyxl
+    wb = openpyxl.Workbook()
+    ws_data = wb.active
+    ws_data.title = "Invoices"
+    ws_data.append(["Invoice Number", "Invoice Date", "Supplier", "Amount"])
+    for i in range(1, 6):
+        ws_data.append([f"INV-TN-{i:03d}", f"2026-10-{i:02d}", "Acme", 100 * i])
+
+    ws_note = wb.create_sheet("Notes")
+    ws_note["A1"] = "Processing Notes"
+    ws_note["A2"] = "Please review all invoices carefully."
+    ws_note["A3"] = "Contact finance@example.com for queries."
+
+    wb.save(str(path))
+    return []
+
+
+def _make_xlsx_excel_dates(path: Path, r) -> list[dict]:
+    """Real Excel datetime objects in date column — sheet_load must strip time."""
+    import openpyxl
+    from datetime import datetime as dt
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Sheet1"
+    ws.append(["Invoice Number", "Invoice Date", "Amount"])
+    for i in range(1, 5):
+        ws.append([f"INV-ED-{i:03d}", dt(2026, 10, i, 0, 0, 0), 100 * i])
+    wb.save(str(path))
+    return []
+
+
+def _make_xlsx_tiny_4row(path: Path, r) -> list[dict]:
+    """Only 4 data rows — still classifies as tabular."""
+    import openpyxl
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Sheet1"
+    ws.append(["Invoice Number", "Invoice Date", "Amount"])
+    for i in range(1, 5):
+        ws.append([f"INV-T4-{i:03d}", f"2026-10-{i:02d}", 100 * i])
+    wb.save(str(path))
+    return []
+
+
+def _make_xlsx_leading_zeros(path: Path, r) -> list[dict]:
+    """Invoice numbers with leading zeros — must be preserved as strings."""
+    import openpyxl
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Sheet1"
+    ws.append(["Invoice Number", "Invoice Date", "Supplier", "Amount"])
+    for i in range(1, 4):
+        ws.append([f"00{i:04d}", f"2026-10-{i:02d}", "Acme Corp", 100 * i])
+    wb.save(str(path))
+    return []
+
+
+def _make_xlsx_totals_row(path: Path, r) -> list[dict]:
+    """Data rows + trailing totals row without invoice number → UNGROUPED_ROWS."""
+    import openpyxl
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Sheet1"
+    ws.append(["Invoice Number", "Invoice Date", "Description", "Amount"])
+    for j in range(1, 4):
+        ws.append([f"INV-TR-001", "2026-10-01", f"Item {j}", 100 * j])
+    # Totals row: no invoice number
+    ws.append([None, None, "TOTAL", 600])
+    wb.save(str(path))
+    return []
+
+
+def _make_xlsx_header_money_equal(path: Path, r) -> list[dict]:
+    """Repeated total column equal across all lines of same invoice."""
+    import openpyxl
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Sheet1"
+    ws.append(["Invoice Number", "Invoice Date", "Description", "Amount", "Total"])
+    for j in range(1, 4):
+        ws.append(["INV-HME-001", "2026-10-01", f"Item {j}", 100, 300])
+    wb.save(str(path))
+    return []
+
+
+def _make_xlsx_header_money_differ(path: Path, r) -> list[dict]:
+    """Repeated total column differs across lines of same invoice → SHEET_GROUP_INCONSISTENT."""
+    import openpyxl
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Sheet1"
+    ws.append(["Invoice Number", "Invoice Date", "Description", "Amount", "Total"])
+    for j in range(1, 4):
+        ws.append(["INV-HMD-001", "2026-10-01", f"Item {j}", 100, 100 * j])  # 100, 200, 300
+    wb.save(str(path))
+    return []
+
+
+def _make_xlsx_arith_error(path: Path, r) -> list[dict]:
+    """Standard headers but wrong Total (off by 1) → ARITH_TOTAL → needs_review."""
+    import openpyxl
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Sheet1"
+    ws.append(["Invoice Number", "Invoice Date", "Supplier", "Customer", "Currency",
+               "Description", "Quantity", "Unit Price", "Amount", "Subtotal", "Tax", "Total"])
+    # 3 lines: amount = qty * unit_price
+    for j in range(1, 4):
+        amt = j * 100
+        ws.append(["INV-AE-001", "2026-10-01", "Acme", "Beta", "USD",
+                   f"Item {j}", j, 100, amt, 600, 60, 661])  # correct total=660, written=661
+    wb.save(str(path))
+    return [{"invoice_number": "INV-AE-001", "invoice_date": "2026-10-01",
+             "supplier_name": "Acme", "customer_name": "Beta",
+             "subtotal": "600.00", "tax": "60.00", "total": "660.00",
+             "currency": "USD", "line_items": []}]
+
+
+def _make_csv_headeronly(path: Path) -> None:
+    """Header row only, no data rows."""
+    with open(path, "w", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        w.writerow(["Invoice Number", "Invoice Date", "Supplier", "Amount"])
+
+
+def _make_csv_cp1252_eu(path: Path, r) -> list[dict]:
+    """CP1252, semicolon-delimited, EU-format amounts (1.234,56)."""
+    rows = []
+    gt_invoices = []
+    for i in range(1, 4):
+        inv_no = f"INV-EU-{i:03d}"
+        inv_date = f"2026-10-{i:02d}"
+        qty = i
+        unit_price = 1234.56
+        amt = qty * unit_price
+        rows.append({
+            "Invoice Number": inv_no,
+            "Invoice Date": inv_date,
+            "Supplier": "EU Supplier",
+            "Customer": "EU Customer",
+            "Currency": "EUR",
+            "Quantity": str(qty),
+            "Unit Price": _fmt_amount_eu(f"{unit_price:.2f}"),
+            "Amount": _fmt_amount_eu(f"{amt:.2f}"),
+        })
+        gt_invoices.append({
+            "invoice_number": inv_no, "invoice_date": inv_date,
+            "supplier_name": "EU Supplier", "customer_name": "EU Customer",
+            "subtotal": None, "tax": None, "total": None, "currency": "EUR", "line_items": [],
+        })
+    with open(path, "w", newline="", encoding="cp1252") as f:
+        w = csv.DictWriter(f, fieldnames=list(rows[0].keys()),
+                           delimiter=";", quoting=csv.QUOTE_MINIMAL)
+        w.writeheader()
+        w.writerows(rows)
+    return gt_invoices
+
+
+def _make_perf_5000x30(path: Path, r) -> None:
+    """5000 rows × 30 columns for performance testing. Written to data/fixtures only."""
+    import openpyxl
+    wb = openpyxl.Workbook(write_only=True)
+    ws = wb.create_sheet("Sheet1")
+    # 10 standard invoice columns + 20 filler columns
+    filler_cols = [f"Extra_{i:02d}" for i in range(1, 21)]
+    headers = ["Invoice Number", "Invoice Date", "Supplier", "Customer", "Currency",
+               "Description", "Quantity", "Unit Price", "Amount", "Total"] + filler_cols
+    ws.append(headers)
+    for i in range(1, 5001):
+        row = [
+            f"INV-PERF-{(i % 10) + 1:04d}",
+            f"2026-{(i % 12) + 1:02d}-01",
+            "Acme Corp",
+            "Beta Ltd",
+            "USD",
+            f"Item {i}",
+            i % 10 + 1,
+            100,
+            (i % 10 + 1) * 100,
+            (i % 10 + 1) * 110,
+        ] + [f"val_{j}" for j in range(20)]
+        ws.append(row)
+    wb.save(str(path))
+
+
 # ------------------------------------------------------------------ main generator
 
 def generate_fixtures(out_dir: Path, seed: int = 42) -> list[dict]:
@@ -1247,21 +1684,50 @@ def generate_fixtures(out_dir: Path, seed: int = 42) -> list[dict]:
     gt.append({"file": fname, "group": "csv", "expect_status": "validated_ok",
                "injected": None, "invoices": [inv]})
 
-    # ---- CSV freeform (same format, different name used by scenarios) ----
+    # ---- CSV freeform — label-value pairs (2 cols → sheet_classify: freeform) ----
+    # Fixed arithmetic subtotal+tax=total so stub invoice passes validate grounding.
     fname = "freeform_001.csv"
-    items = _gen_items(r, 2)
-    inv = _make_csv_utf8(
-        out_dir / fname,
-        inv_number=f"INV-CSV-{seed}-0002",
-        inv_date="2026-10-19",
-        supplier=fake.company(),
-        customer=fake.company(),
-        currency="EUR",
-        items=items,
-        tax_rate=0,
-    )
+    freeform_inv_num = f"INV-CSV-{seed}-0002"
+    freeform_supplier = fake.company()
+    freeform_customer = fake.company()
+    freeform_subtotal = "100.00"
+    freeform_tax = "10.00"
+    freeform_total = "110.00"
+    with open(out_dir / fname, "w", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        w.writerow(["Label", "Value"])
+        w.writerow(["Invoice Number", freeform_inv_num])
+        w.writerow(["Date", "2026-10-19"])
+        w.writerow(["Supplier", freeform_supplier])
+        w.writerow(["Customer", freeform_customer])
+        w.writerow(["Currency", "EUR"])
+        w.writerow(["Subtotal", freeform_subtotal])
+        w.writerow(["Tax", freeform_tax])
+        w.writerow(["Total", freeform_total])
+    inv_freeform_csv = {
+        "invoice_number": freeform_inv_num,
+        "invoice_date": "2026-10-19",
+        "supplier_name": freeform_supplier,
+        "customer_name": freeform_customer,
+        "subtotal": freeform_subtotal,
+        "tax": freeform_tax,
+        "total": freeform_total,
+        "currency": "EUR",
+        "line_items": [],
+        # Used by stub _make_invoice so grounding passes in scenario test
+        "printed": {
+            "invoice_number": freeform_inv_num,
+            "invoice_date": "2026-10-19",
+            "supplier_name": freeform_supplier,
+            "customer_name": freeform_customer,
+            "subtotal": freeform_subtotal,
+            "tax": freeform_tax,
+            "total": freeform_total,
+            "currency": "EUR",
+        },
+    }
     gt.append({"file": fname, "group": "csv", "expect_status": "validated_ok",
-               "injected": None, "invoices": [inv]})
+               "injected": None, "invoices": [inv_freeform_csv]})
 
     # ---- CSV cp1252 ----
     fname = "cp1252_001.csv"
@@ -1441,6 +1907,115 @@ def generate_fixtures(out_dir: Path, seed: int = 42) -> list[dict]:
     gt.append({"file": "edge_zipbomb.xlsx", "group": "edge",
                "expect_status": "failed", "expect_error_code": "TOO_LARGE",
                "injected": None, "invoices": []})
+
+    # ---- M4 sheet fixtures ----
+
+    fname = "xlsx_simple_linegrain.xlsx"
+    _inv_sl = _make_xlsx_simple_linegrain(out_dir / fname, r)
+    gt.append({"file": fname, "group": "sheet_m4", "expect_status": "validated_ok",
+               "injected": None, "invoices": _inv_sl})
+
+    fname = "xlsx_invoice_grain.xlsx"
+    _inv_ig = _make_xlsx_invoice_grain(out_dir / fname, r)
+    gt.append({"file": fname, "group": "sheet_m4", "expect_status": "validated_ok",
+               "injected": None, "invoices": _inv_ig})
+
+    fname = "csv_invoice_grain.csv"
+    _inv_cig = _make_csv_invoice_grain(out_dir / fname, r)
+    gt.append({"file": fname, "group": "sheet_m4", "expect_status": "validated_ok",
+               "injected": None, "invoices": _inv_cig})
+
+    fname = "xlsx_odd_headers.xlsx"
+    _inv_oh = _make_xlsx_odd_headers(out_dir / fname, r)
+    gt.append({"file": fname, "group": "sheet_m4", "expect_status": "needs_review",
+               "injected": None, "invoices": _inv_oh})
+
+    fname = "xlsx_ambiguous_dates.xlsx"
+    _make_xlsx_ambiguous_dates(out_dir / fname, r)
+    gt.append({"file": fname, "group": "sheet_m4", "expect_status": "needs_review",
+               "injected": None, "invoices": []})
+
+    fname = "xlsx_multisheet_same_headers.xlsx"
+    _make_xlsx_multisheet_same_headers(out_dir / fname, r)
+    gt.append({"file": fname, "group": "sheet_m4", "expect_status": "needs_review",
+               "injected": None, "invoices": []})
+
+    fname = "xlsx_hidden_sheet.xlsx"
+    _make_xlsx_hidden_sheet(out_dir / fname, r)
+    gt.append({"file": fname, "group": "sheet_m4", "expect_status": "needs_review",
+               "injected": None, "invoices": []})
+
+    fname = "xlsx_merged_header.xlsx"
+    _make_xlsx_merged_header(out_dir / fname, r)
+    gt.append({"file": fname, "group": "sheet_m4", "expect_status": "needs_review",
+               "injected": None, "invoices": []})
+
+    fname = "xlsx_banner_rows.xlsx"
+    _make_xlsx_banner_rows(out_dir / fname, r)
+    gt.append({"file": fname, "group": "sheet_m4", "expect_status": "needs_review",
+               "injected": None, "invoices": []})
+
+    fname = "xlsx_formula_nocache.xlsx"
+    _make_xlsx_formula_nocache(out_dir / fname, r)
+    gt.append({"file": fname, "group": "sheet_m4", "expect_status": "needs_review",
+               "injected": None, "invoices": []})
+
+    fname = "xlsx_2sheets_tabular_plus_note.xlsx"
+    _make_xlsx_2sheets_tabular_plus_note(out_dir / fname, r)
+    gt.append({"file": fname, "group": "sheet_m4", "expect_status": "needs_review",
+               "injected": None, "invoices": []})
+
+    fname = "xlsx_excel_dates.xlsx"
+    _make_xlsx_excel_dates(out_dir / fname, r)
+    gt.append({"file": fname, "group": "sheet_m4", "expect_status": "needs_review",
+               "injected": None, "invoices": []})
+
+    fname = "xlsx_tiny_4row.xlsx"
+    _make_xlsx_tiny_4row(out_dir / fname, r)
+    gt.append({"file": fname, "group": "sheet_m4", "expect_status": "needs_review",
+               "injected": None, "invoices": []})
+
+    fname = "xlsx_leading_zeros.xlsx"
+    _make_xlsx_leading_zeros(out_dir / fname, r)
+    gt.append({"file": fname, "group": "sheet_m4", "expect_status": "needs_review",
+               "injected": None, "invoices": []})
+
+    fname = "xlsx_totals_row.xlsx"
+    _make_xlsx_totals_row(out_dir / fname, r)
+    gt.append({"file": fname, "group": "sheet_m4", "expect_status": "needs_review",
+               "injected": None, "invoices": []})
+
+    fname = "xlsx_header_money_equal.xlsx"
+    _make_xlsx_header_money_equal(out_dir / fname, r)
+    gt.append({"file": fname, "group": "sheet_m4", "expect_status": "needs_review",
+               "injected": None, "invoices": []})
+
+    fname = "xlsx_header_money_differ.xlsx"
+    _make_xlsx_header_money_differ(out_dir / fname, r)
+    gt.append({"file": fname, "group": "sheet_m4", "expect_status": "needs_review",
+               "injected": None, "invoices": []})
+
+    fname = "xlsx_arith_error.xlsx"
+    _inv_ae = _make_xlsx_arith_error(out_dir / fname, r)
+    gt.append({"file": fname, "group": "sheet_m4", "expect_status": "needs_review",
+               "injected": None, "invoices": _inv_ae})
+
+    fname = "csv_headeronly.csv"
+    _make_csv_headeronly(out_dir / fname)
+    gt.append({"file": fname, "group": "sheet_m4", "expect_status": "needs_review",
+               "injected": None, "invoices": []})
+
+    fname = "csv_cp1252_eu.csv"
+    _make_csv_cp1252_eu(out_dir / fname, r)
+    gt.append({"file": fname, "group": "sheet_m4", "expect_status": "needs_review",
+               "injected": None, "invoices": []})
+
+    # perf_5000x30.xlsx is generated only if not already present (slow to write)
+    perf_path = out_dir / "perf_5000x30.xlsx"
+    if not perf_path.exists():
+        _make_perf_5000x30(perf_path, r)
+    gt.append({"file": "perf_5000x30.xlsx", "group": "sheet_m4_perf",
+               "expect_status": "needs_review", "injected": None, "invoices": []})
 
     # ---- write ground truth ----
     gt_json = json.dumps(gt, indent=2)
