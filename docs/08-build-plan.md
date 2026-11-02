@@ -39,3 +39,10 @@ After approval: "Implement. Write the tests from the spec first and show them fa
 - [ ] Assessment: repo link (public or access granted), README, architecture diagram, DB schema, evaluation report, video link, AI prompts disclosure.
 - [ ] All Drive links open in incognito. Sent before 6 PM Nov 4 (deadline 11 PM; the email itself did not state a time zone).
 - [ ] One sentence on prior LangGraph invoice-verification project, with link.
+
+## M7 cleanup list (carried over from M1, do these in M7, not before)
+- Remove IssueCode.ARITH_MISMATCH.
+- Remove the dict/Invoice dual handling and the stub "unit" key in validate.
+- Grounding must skip only for page_source in {sheet, vision}, NOT when source_text is empty
+  (an empty OCR page must surface as a problem).
+- Add a test for _extract_amounts on "Total 1,234.56 EUR 99 Qty 10".
