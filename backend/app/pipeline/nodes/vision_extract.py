@@ -10,7 +10,7 @@ import io
 from pathlib import Path
 
 from app.pipeline.config import get_config
-from app.pipeline.llm.client import LLMConfigError, Usage
+from app.pipeline.llm.client import LLMConfigError, LLMTransientError, Usage
 from app.pipeline.llm.prompts import get_vision_system
 from app.pipeline.state import Deps, State, node
 from app.pipeline.utils.dates import parse_date
@@ -225,7 +225,21 @@ def make_vision_extract(deps: Deps | None = None):
                 total_usage = total_usage + usage
                 vision_inv = _normalize_vision(raw, uid, pages)
             except LLMConfigError:
-                raise
+                raise  # propagate; document fails
+            except LLMTransientError as exc:
+                # Per-minute rate-limit retries exhausted; treat same as VISION_FAILED
+                warnings.append({
+                    "code": IssueCode.VISION_FAILED.value,
+                    "severity": Severity.error.value,
+                    "message": f"unit {uid}: vision transient LLM error: {exc}",
+                    "field": None, "expected": None, "got": None, "location": {},
+                })
+                text_inv = next(
+                    (i for i in invoices_in if i.get("unit_id") == uid), None
+                )
+                if text_inv:
+                    new_invoices.append(text_inv)
+                continue
             except Exception as exc:  # noqa: BLE001
                 warnings.append({
                     "code": IssueCode.VISION_FAILED.value,

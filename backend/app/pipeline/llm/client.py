@@ -38,12 +38,20 @@ class Usage:
 
 
 class LLMConfigError(Exception):
-    """Raised for unrecoverable LLM config problems (bad key, quota, wrong model).
+    """Raised for unrecoverable LLM config problems (bad key, daily quota, wrong model).
     Documents fail with LLM_CONFIG_ERROR; no retry.
 
     _propagate = True so the @node wrapper re-raises instead of catching.
     """
     _propagate = True
+
+
+class LLMTransientError(Exception):
+    """Raised when transient retries (per-minute 429, timeout, 5xx) are exhausted.
+    Nodes catch this and emit EXTRACTION_FAILED — the document does NOT fail.
+    The @node wrapper converts uncaught exceptions into INTERNAL_ERROR, so nodes
+    must catch LLMTransientError explicitly if they don't already catch Exception.
+    """
 
 
 @runtime_checkable
@@ -228,8 +236,11 @@ class RealLLMClient:
                             delay = _get_retry_after(exc) or float(1 << transient_attempt)
                             time.sleep(delay)
                             continue
-                        # Transient retries exhausted — re-raise for the caller
-                        raise
+                        # Transient retries exhausted — raise LLMTransientError so nodes
+                        # can turn it into EXTRACTION_FAILED without failing the document.
+                        raise LLMTransientError(
+                            f"Transient LLM error after {cfg.LLM_MAX_TRANSIENT_RETRIES} retries: {exc}"
+                        ) from exc
                     # Unknown error — re-raise
                     raise
 

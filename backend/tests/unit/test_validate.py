@@ -795,3 +795,78 @@ def test_sha256_file():
         f.write(content)
         path = f.name
     assert sha256_file(path) == expected
+
+
+# ---------------------------------------------------------------------------
+# corrected_fields: grounding skip semantics (amendment #14)
+# ---------------------------------------------------------------------------
+
+def test_corrected_field_skips_grounding():
+    """A field listed in corrected_fields must not produce NOT_GROUNDED."""
+    from app.pipeline.validation.grounding import check_grounding
+
+    invoice = make_invoice(supplier_name="XYZ_UniqueString_NotInSourceText_12345")
+    # Without corrected_fields → supplier_name should fire NOT_GROUNDED
+    issues_without = check_grounding(invoice, "completely unrelated content", "parser")
+    assert any(
+        getattr(i, "field", None) == "supplier_name" for i in issues_without
+    ), "Expected NOT_GROUNDED for supplier_name when not in corrected_fields"
+
+    # With corrected_fields containing supplier_name → should be skipped
+    issues_with = check_grounding(
+        invoice,
+        "completely unrelated content",
+        "parser",
+        corrected_fields=frozenset({"supplier_name"}),
+    )
+    assert not any(
+        getattr(i, "field", None) == "supplier_name" for i in issues_with
+    ), "supplier_name should be skipped when in corrected_fields"
+
+
+def test_uncorrected_field_still_grounds():
+    """Fields NOT in corrected_fields still produce NOT_GROUNDED when absent from source."""
+    from app.pipeline.validation.grounding import check_grounding
+
+    invoice = make_invoice(supplier_name="GhostSupplier_NeverInText_99999")
+    # corrected_fields contains a different field — supplier_name still checked
+    issues = check_grounding(
+        invoice,
+        "some text with invoice number INV-001",
+        "parser",
+        corrected_fields=frozenset({"invoice_number"}),
+    )
+    assert any(
+        getattr(i, "field", None) == "supplier_name" for i in issues
+    ), "supplier_name should still ground-check when not in corrected_fields"
+
+
+def test_corrected_fields_only_affects_grounding():
+    """corrected_fields must not suppress arithmetic or completeness issues."""
+    from app.pipeline.validation import ValidationCtx, run_all
+    from app.pipeline.validation.duplicates import InMemorySeenStore
+
+    # Invoice with wrong arithmetic: subtotal+tax != total
+    invoice = make_invoice(
+        subtotal=Decimal("100.00"),
+        tax=Decimal("10.00"),
+        total=Decimal("999.99"),  # wrong
+        corrected_fields=frozenset(),  # not a real field on Invoice model; set via ctx
+    )
+    ctx = ValidationCtx(
+        tier="parser",
+        file_type="pdf",
+        file_hash="testcorrectedfields",
+        source_text="INV-001 Acme Corp Customer Ltd 2026-01-01 100.00 10.00 999.99",
+        seen_store=InMemorySeenStore(),
+        seen_in_file={},
+        day_first=None,
+        corrected_fields=frozenset({"total", "subtotal", "tax"}),
+    )
+    issues = run_all(invoice, ctx)
+    codes = [getattr(i, "code", i) for i in issues]
+    code_strs = [c.value if hasattr(c, "value") else str(c) for c in codes]
+    # ARITH_ERROR should still fire even though total/subtotal/tax are in corrected_fields
+    assert any("ARITH" in s for s in code_strs), (
+        f"ARITH_ERROR should not be suppressed by corrected_fields; got {code_strs}"
+    )

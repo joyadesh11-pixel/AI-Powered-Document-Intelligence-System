@@ -11,7 +11,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
 from app.pipeline.config import get_config
-from app.pipeline.llm.client import LLMConfigError, Usage
+from app.pipeline.llm.client import LLMConfigError, LLMTransientError, Usage
 from app.pipeline.llm.prompts import get_extract_system
 from app.pipeline.state import Deps, State, node
 from app.pipeline.utils.dates import parse_date
@@ -167,7 +167,13 @@ def make_llm_extract(deps: Deps | None = None):
                 inv = _normalize(raw, unit, page_source)
                 return inv, usage, None
             except LLMConfigError:
-                raise  # propagate immediately
+                raise  # propagate immediately; document fails
+            except LLMTransientError as exc:
+                # Per-minute rate-limit retries exhausted; escalate to vision
+                err_issue = _extraction_failed_issue(
+                    unit["id"], f"unit {unit['id']}: transient LLM error: {exc}"
+                )
+                return None, Usage(), {"type": "error", "data": err_issue, "uid": unit["id"]}
             except Exception as exc:  # noqa: BLE001
                 err_issue = _extraction_failed_issue(
                     unit["id"], f"unit {unit['id']}: {exc}"

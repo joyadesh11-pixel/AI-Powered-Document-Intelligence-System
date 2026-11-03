@@ -194,6 +194,9 @@ class PipelineResult(BaseModel):
     history: list[dict] = []
     llm_usage: dict = {}
     pipeline_version: str
+    # Set by finalize when a sheet's column mapping was used/produced
+    sheet_mapping: SheetMapping | None = None
+    header_hash: str | None = None
 
 
 # ---------------------------------------------------------- sheet mapping

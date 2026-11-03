@@ -176,8 +176,8 @@ def test_timings_sum_matches_total():
 # ------------------------------------------------------------------ T6: pipeline_version bumped
 
 def test_pipeline_version_is_m6():
-    """pipeline_version is bumped to '0.1.0-m6'."""
+    """pipeline_version is current (0.1.0-m8a)."""
     s = _base_state(invoices=[_clean_invoice()])
     result = finalize(s)
     r = result.get("result", {})
-    assert r.get("pipeline_version") == "0.1.0-m6"
+    assert r.get("pipeline_version") == "0.1.0-m8a"

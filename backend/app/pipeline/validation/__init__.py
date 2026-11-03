@@ -47,6 +47,8 @@ class ValidationCtx:
     date_min: Any = None
     date_max_days_ahead: int | None = None
     ground_fuzzy_min: int = 80
+    # Fields a human corrected via PATCH; grounding check is skipped for these
+    corrected_fields: frozenset[str] = field(default_factory=frozenset)
 
 
 def run_all(invoice: Any, ctx: ValidationCtx) -> list[Issue]:
@@ -60,7 +62,7 @@ def run_all(invoice: Any, ctx: ValidationCtx) -> list[Issue]:
         date_max_days_ahead=ctx.date_max_days_ahead,
     ))
     issues.extend(check_arithmetic(invoice))
-    issues.extend(check_grounding(invoice, ctx.source_text, ctx.tier))
+    issues.extend(check_grounding(invoice, ctx.source_text, ctx.tier, corrected_fields=ctx.corrected_fields))
 
     dup = check_duplicate(invoice, ctx.seen_in_file, ctx.seen_store, ctx.file_hash)
     if dup is not None:

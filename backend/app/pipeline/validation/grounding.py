@@ -17,8 +17,17 @@ except ImportError:
 _GROUND_FUZZY_MIN = 80
 
 
-def check_grounding(invoice: Any, source_text: str, tier: str) -> list[Issue]:
+def check_grounding(
+    invoice: Any,
+    source_text: str,
+    tier: str,
+    *,
+    corrected_fields: frozenset[str] = frozenset(),
+) -> list[Issue]:
     """Return NOT_GROUNDED issues; skipped for vision/sheet tiers.
+
+    corrected_fields: field names that a human corrected via PATCH; grounding
+    is skipped for these because the human value may not appear in the source.
 
     Empty OCR source text does NOT skip grounding — empty pages surface NOT_GROUNDED.
     """
@@ -31,20 +40,23 @@ def check_grounding(invoice: Any, source_text: str, tier: str) -> list[Issue]:
     norm_source = normalise(source_text)
 
     # Invoice number
-    inv_num = _get(invoice, "invoice_number")
-    if inv_num is not None:
-        norm_inv = normalise(str(inv_num))
-        if norm_inv and norm_inv not in norm_source:
-            issues.append(Issue(
-                code=IssueCode.NOT_GROUNDED,
-                severity=severity,
-                field="invoice_number",
-                got=str(inv_num),
-                message=f"invoice_number '{inv_num}' not found in source text",
-            ))
+    if "invoice_number" not in corrected_fields:
+        inv_num = _get(invoice, "invoice_number")
+        if inv_num is not None:
+            norm_inv = normalise(str(inv_num))
+            if norm_inv and norm_inv not in norm_source:
+                issues.append(Issue(
+                    code=IssueCode.NOT_GROUNDED,
+                    severity=severity,
+                    field="invoice_number",
+                    got=str(inv_num),
+                    message=f"invoice_number '{inv_num}' not found in source text",
+                ))
 
     # Supplier / customer names — fuzzy match
     for f in ("supplier_name", "customer_name"):
+        if f in corrected_fields:
+            continue
         name = _get(invoice, f)
         if name is not None:
             if not _fuzzy_match(str(name), source_text):
@@ -59,6 +71,8 @@ def check_grounding(invoice: Any, source_text: str, tier: str) -> list[Issue]:
     # Dates: raw string must appear
     raw = _get(invoice, "raw") or {}
     for f in ("invoice_date", "due_date"):
+        if f in corrected_fields:
+            continue
         raw_val = raw.get(f)
         parsed = _get(invoice, f)
         if raw_val and parsed is not None:
@@ -74,6 +88,8 @@ def check_grounding(invoice: Any, source_text: str, tier: str) -> list[Issue]:
     # Amounts: subtotal, tax, total, plus line amounts
     source_amounts = _extract_amounts(source_text)
     for f in ("subtotal", "tax", "total"):
+        if f in corrected_fields:
+            continue
         v = _get(invoice, f)
         if v is not None and source_amounts and v not in source_amounts:
             issues.append(Issue(
@@ -86,6 +102,8 @@ def check_grounding(invoice: Any, source_text: str, tier: str) -> list[Issue]:
 
     line_items = _get(invoice, "line_items") or []
     for i, li in enumerate(line_items):
+        if "line_items" in corrected_fields:
+            break
         amt = _get(li, "amount")
         if amt is not None and source_amounts and amt not in source_amounts:
             issues.append(Issue(

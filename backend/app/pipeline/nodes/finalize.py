@@ -86,6 +86,17 @@ def finalize(s: State) -> dict:
     total_secs = round(sum(by_node.values()), 5)
     timings = {"total": total_secs, "by_node": by_node}
 
+    # sheet_mapping: only when a sheet doc produced a usable column mapping
+    sheet_mapping = None
+    header_hash = None
+    if s.get("parse_ok") is True and s.get("mapping"):
+        sheet_mapping = s.get("mapping")
+        primary = s.get("primary_sheet")
+        for sm in (s.get("sheets") or []):
+            if isinstance(sm, dict) and sm.get("name") == primary:
+                header_hash = sm.get("header_hash")
+                break
+
     result = {
         "status": doc_status,
         "error_code": s.get("error_code"),
@@ -102,7 +113,9 @@ def finalize(s: State) -> dict:
         "timings": timings,
         "history": history,
         "llm_usage": s.get("llm_usage", {}),
-        "pipeline_version": "0.1.0-m6",
+        "pipeline_version": "0.1.0-m8a",
+        "sheet_mapping": sheet_mapping,
+        "header_hash": header_hash,
     }
 
     return {"status": doc_status, "result": result}

@@ -828,6 +828,228 @@
     ]
   },
   {
+    "file": "digital_A_008.pdf",
+    "group": "digital_pdf",
+    "expect_status": "validated_ok",
+    "injected": null,
+    "invoices": [
+      {
+        "invoice_number": "INV-A-42-0008",
+        "invoice_date": "2026-11-01",
+        "supplier_name": "Burton Ltd",
+        "customer_name": "Carlson-Cruz",
+        "subtotal": "2471.36",
+        "tax": "0.00",
+        "total": "2471.36",
+        "currency": "EUR",
+        "line_items": [
+          {
+            "description": "Software License",
+            "quantity": "8",
+            "unit_price": "87.32",
+            "amount": "698.56"
+          },
+          {
+            "description": "API Access",
+            "quantity": "16",
+            "unit_price": "110.80",
+            "amount": "1772.80"
+          }
+        ],
+        "printed": {
+          "invoice_number": "INV-A-42-0008",
+          "invoice_date": "2026-11-01",
+          "supplier_name": "Burton Ltd",
+          "customer_name": "Carlson-Cruz",
+          "subtotal": "2.471,36",
+          "tax": "0,00",
+          "total": "2.471,36",
+          "currency": "EUR"
+        }
+      }
+    ]
+  },
+  {
+    "file": "digital_A_009.pdf",
+    "group": "digital_pdf",
+    "expect_status": "validated_ok",
+    "injected": null,
+    "invoices": [
+      {
+        "invoice_number": "INV-A-42-0009",
+        "invoice_date": "2026-11-02",
+        "supplier_name": "Ferrell, Rice and Maddox",
+        "customer_name": "Frazier Inc",
+        "subtotal": "3991.65",
+        "tax": "199.58",
+        "total": "4191.23",
+        "currency": "EUR",
+        "line_items": [
+          {
+            "description": "Data Storage",
+            "quantity": "1",
+            "unit_price": "492.73",
+            "amount": "492.73"
+          },
+          {
+            "description": "Training Session",
+            "quantity": "15",
+            "unit_price": "146.20",
+            "amount": "2193.00"
+          },
+          {
+            "description": "Custom Development",
+            "quantity": "16",
+            "unit_price": "81.62",
+            "amount": "1305.92"
+          }
+        ],
+        "printed": {
+          "invoice_number": "INV-A-42-0009",
+          "invoice_date": "2026-11-02",
+          "supplier_name": "Ferrell, Rice and Maddox",
+          "customer_name": "Frazier Inc",
+          "subtotal": "3,991",
+          "tax": "199",
+          "total": "4,191",
+          "currency": "EUR"
+        }
+      }
+    ]
+  },
+  {
+    "file": "digital_A_010.pdf",
+    "group": "digital_pdf",
+    "expect_status": "validated_ok",
+    "injected": null,
+    "invoices": [
+      {
+        "invoice_number": "INV-A-42-0010",
+        "invoice_date": "2026-11-03",
+        "supplier_name": "Dyer, Potter and Mack",
+        "customer_name": "Rodriguez-Graham",
+        "subtotal": "692.70",
+        "tax": "138.54",
+        "total": "831.24",
+        "currency": "EUR",
+        "line_items": [
+          {
+            "description": "Maintenance",
+            "quantity": "18",
+            "unit_price": "35.17",
+            "amount": "633.06"
+          },
+          {
+            "description": "Cloud Hosting",
+            "quantity": "2",
+            "unit_price": "29.82",
+            "amount": "59.64"
+          }
+        ],
+        "printed": {
+          "invoice_number": "INV-A-42-0010",
+          "invoice_date": "2026-11-03",
+          "supplier_name": "Dyer, Potter and Mack",
+          "customer_name": "Rodriguez-Graham",
+          "subtotal": "692.70",
+          "tax": "138.54",
+          "total": "831.24",
+          "currency": "EUR"
+        }
+      }
+    ]
+  },
+  {
+    "file": "digital_B_008.pdf",
+    "group": "digital_pdf",
+    "expect_status": "validated_ok",
+    "injected": null,
+    "invoices": [
+      {
+        "invoice_number": "INV-B-42-0008",
+        "invoice_date": "2026-11-08",
+        "supplier_name": "Smith-Bowen",
+        "customer_name": "Baker, Mason and White",
+        "subtotal": "2494.26",
+        "tax": "124.71",
+        "total": "2618.97",
+        "currency": "GBP",
+        "line_items": [
+          {
+            "description": "Consulting Services",
+            "quantity": "17",
+            "unit_price": "44.66",
+            "amount": "759.22"
+          },
+          {
+            "description": "Hardware Component",
+            "quantity": "3",
+            "unit_price": "299.54",
+            "amount": "898.62"
+          },
+          {
+            "description": "Support Contract",
+            "quantity": "13",
+            "unit_price": "64.34",
+            "amount": "836.42"
+          }
+        ],
+        "printed": {
+          "invoice_number": "INV-B-42-0008",
+          "invoice_date": "2026-11-08",
+          "supplier_name": "Smith-Bowen",
+          "customer_name": "Baker, Mason and White",
+          "subtotal": "2.494,26",
+          "tax": "124,71",
+          "total": "2.618,97",
+          "currency": "GBP"
+        }
+      }
+    ]
+  },
+  {
+    "file": "digital_B_009.pdf",
+    "group": "digital_pdf",
+    "expect_status": "validated_ok",
+    "injected": null,
+    "invoices": [
+      {
+        "invoice_number": "INV-B-42-0009",
+        "invoice_date": "2026-11-09",
+        "supplier_name": "Harrell LLC",
+        "customer_name": "Romero, Gonzalez and Brooks",
+        "subtotal": "5649.38",
+        "tax": "282.47",
+        "total": "5931.85",
+        "currency": "EUR",
+        "line_items": [
+          {
+            "description": "Maintenance",
+            "quantity": "3",
+            "unit_price": "212.52",
+            "amount": "637.56"
+          },
+          {
+            "description": "Maintenance",
+            "quantity": "19",
+            "unit_price": "263.78",
+            "amount": "5011.82"
+          }
+        ],
+        "printed": {
+          "invoice_number": "INV-B-42-0009",
+          "invoice_date": "2026-11-09",
+          "supplier_name": "Harrell LLC",
+          "customer_name": "Romero, Gonzalez and Brooks",
+          "subtotal": "5,649",
+          "tax": "282",
+          "total": "5,931",
+          "currency": "EUR"
+        }
+      }
+    ]
+  },
+  {
     "file": "valid_001.png",
     "group": "image",
     "expect_status": "validated_ok",
@@ -857,36 +1079,36 @@
       {
         "invoice_number": "INV-XLS-42-0001",
         "invoice_date": "2026-10-15",
-        "supplier_name": "Burton Ltd",
-        "customer_name": "Carlson-Cruz",
-        "subtotal": "5908.21",
-        "tax": "590.82",
-        "total": "6499.03",
+        "supplier_name": "Ryan PLC",
+        "customer_name": "George Group",
+        "subtotal": "3802.03",
+        "tax": "380.20",
+        "total": "4182.23",
         "currency": "USD",
         "line_items": [
           {
-            "description": "Custom Development",
+            "description": "Cloud Hosting",
+            "quantity": "8",
+            "unit_price": "136.48",
+            "amount": "1091.84"
+          },
+          {
+            "description": "Hardware Component",
+            "quantity": "10",
+            "unit_price": "231.33",
+            "amount": "2313.30"
+          },
+          {
+            "description": "Software License",
             "quantity": "1",
-            "unit_price": "484.65",
-            "amount": "484.65"
+            "unit_price": "231.85",
+            "amount": "231.85"
           },
           {
-            "description": "Support Contract",
-            "quantity": "6",
-            "unit_price": "206.17",
-            "amount": "1237.02"
-          },
-          {
-            "description": "API Access",
-            "quantity": "7",
-            "unit_price": "433.00",
-            "amount": "3031.00"
-          },
-          {
-            "description": "Consulting Services",
-            "quantity": "6",
-            "unit_price": "192.59",
-            "amount": "1155.54"
+            "description": "Maintenance",
+            "quantity": "4",
+            "unit_price": "41.26",
+            "amount": "165.04"
           }
         ]
       }
@@ -901,11 +1123,11 @@
       {
         "invoice_number": "INV-FF-42-0001",
         "invoice_date": "2026-10-16",
-        "supplier_name": "Ferrell, Rice and Maddox",
-        "customer_name": "Frazier Inc",
+        "supplier_name": "Rodriguez LLC",
+        "customer_name": "Allen-Allen",
         "subtotal": null,
         "tax": null,
-        "total": "4928.01",
+        "total": "1144.46",
         "currency": "EUR",
         "line_items": []
       }
@@ -920,30 +1142,30 @@
       {
         "invoice_number": "INV-XL-42-0001",
         "invoice_date": "2026-10-17",
-        "supplier_name": "Dyer, Potter and Mack",
-        "customer_name": "Rodriguez-Graham",
-        "subtotal": "6890.49",
-        "tax": "344.52",
-        "total": "7235.01",
+        "supplier_name": "Arroyo, Miller and Tucker",
+        "customer_name": "Spence PLC",
+        "subtotal": "10103.66",
+        "tax": "505.18",
+        "total": "10608.84",
         "currency": "GBP",
         "line_items": [
           {
             "description": "Training Session",
+            "quantity": "5",
+            "unit_price": "466.96",
+            "amount": "2334.80"
+          },
+          {
+            "description": "Software License",
+            "quantity": "8",
+            "unit_price": "187.92",
+            "amount": "1503.36"
+          },
+          {
+            "description": "Hardware Component",
             "quantity": "15",
-            "unit_price": "146.20",
-            "amount": "2193.00"
-          },
-          {
-            "description": "Custom Development",
-            "quantity": "16",
-            "unit_price": "81.62",
-            "amount": "1305.92"
-          },
-          {
-            "description": "Training Session",
-            "quantity": "7",
-            "unit_price": "484.51",
-            "amount": "3391.57"
+            "unit_price": "417.70",
+            "amount": "6265.50"
           }
         ]
       }
@@ -958,30 +1180,30 @@
       {
         "invoice_number": "INV-CSV-42-0001",
         "invoice_date": "2026-10-18",
-        "supplier_name": "Smith-Bowen",
+        "supplier_name": "Anderson Group",
         "customer_name": "Acme, Inc.",
-        "subtotal": "8514.40",
+        "subtotal": "14837.99",
         "tax": "0.00",
-        "total": "8514.40",
+        "total": "14837.99",
         "currency": "USD",
         "line_items": [
           {
-            "description": "Maintenance",
-            "quantity": "18",
-            "unit_price": "35.17",
-            "amount": "633.06"
+            "description": "Training Session",
+            "quantity": "20",
+            "unit_price": "492.01",
+            "amount": "9840.20"
           },
           {
-            "description": "Cloud Hosting",
-            "quantity": "2",
-            "unit_price": "29.82",
-            "amount": "59.64"
+            "description": "Custom Development",
+            "quantity": "1",
+            "unit_price": "335.59",
+            "amount": "335.59"
           },
           {
-            "description": "API Access",
-            "quantity": "17",
-            "unit_price": "460.10",
-            "amount": "7821.70"
+            "description": "Custom Development",
+            "quantity": "10",
+            "unit_price": "466.22",
+            "amount": "4662.20"
           }
         ]
       }
@@ -996,8 +1218,8 @@
       {
         "invoice_number": "INV-CSV-42-0002",
         "invoice_date": "2026-10-19",
-        "supplier_name": "Baker, Mason and White",
-        "customer_name": "Harrell LLC",
+        "supplier_name": "Martin, Rose and Obrien",
+        "customer_name": "Hickman Ltd",
         "subtotal": "100.00",
         "tax": "10.00",
         "total": "110.00",
@@ -1006,8 +1228,8 @@
         "printed": {
           "invoice_number": "INV-CSV-42-0002",
           "invoice_date": "2026-10-19",
-          "supplier_name": "Baker, Mason and White",
-          "customer_name": "Harrell LLC",
+          "supplier_name": "Martin, Rose and Obrien",
+          "customer_name": "Hickman Ltd",
           "subtotal": "100.00",
           "tax": "10.00",
           "total": "110.00",
@@ -1025,30 +1247,30 @@
       {
         "invoice_number": "INV-CSV-42-0003",
         "invoice_date": "2026-10-20",
-        "supplier_name": "Romero, Gonzalez and Brooks",
-        "customer_name": "Ryan PLC",
-        "subtotal": "2250.99",
-        "tax": "337.65",
-        "total": "2588.64",
+        "supplier_name": "Harris, Collins and Carney",
+        "customer_name": "Brooks, Lam and Hayes",
+        "subtotal": "4339.85",
+        "tax": "650.98",
+        "total": "4990.83",
         "currency": "USD",
         "line_items": [
           {
-            "description": "Custom Development",
-            "quantity": "6",
-            "unit_price": "33.16",
-            "amount": "198.96"
-          },
-          {
-            "description": "Custom Development",
-            "quantity": "3",
-            "unit_price": "426.41",
-            "amount": "1279.23"
+            "description": "Software License",
+            "quantity": "5",
+            "unit_price": "135.91",
+            "amount": "679.55"
           },
           {
             "description": "Software License",
+            "quantity": "18",
+            "unit_price": "81.95",
+            "amount": "1475.10"
+          },
+          {
+            "description": "Training Session",
             "quantity": "20",
-            "unit_price": "38.64",
-            "amount": "772.80"
+            "unit_price": "109.26",
+            "amount": "2185.20"
           }
         ]
       }
@@ -1072,34 +1294,40 @@
       {
         "invoice_number": "INV-MIX-42-0001",
         "invoice_date": "2026-10-22",
-        "supplier_name": "George Group",
-        "customer_name": "Rodriguez LLC",
-        "subtotal": "4216.84",
-        "tax": "421.68",
-        "total": "4638.52",
+        "supplier_name": "Walker LLC",
+        "customer_name": "Chapman and Sons",
+        "subtotal": "2639.38",
+        "tax": "263.94",
+        "total": "2903.32",
         "currency": "USD",
         "line_items": [
           {
-            "description": "Data Storage",
-            "quantity": "4",
-            "unit_price": "471.09",
-            "amount": "1884.36"
+            "description": "Support Contract",
+            "quantity": "9",
+            "unit_price": "255.18",
+            "amount": "2296.62"
           },
           {
-            "description": "Maintenance",
-            "quantity": "8",
-            "unit_price": "291.56",
-            "amount": "2332.48"
+            "description": "Training Session",
+            "quantity": "2",
+            "unit_price": "50.69",
+            "amount": "101.38"
+          },
+          {
+            "description": "Data Storage",
+            "quantity": "9",
+            "unit_price": "26.82",
+            "amount": "241.38"
           }
         ],
         "printed": {
           "invoice_number": "INV-MIX-42-0001",
           "invoice_date": "2026-10-22",
-          "supplier_name": "George Group",
-          "customer_name": "Rodriguez LLC",
-          "subtotal": "4,216.84",
-          "tax": "421.68",
-          "total": "4,638.52",
+          "supplier_name": "Walker LLC",
+          "customer_name": "Chapman and Sons",
+          "subtotal": "2,639.38",
+          "tax": "263.94",
+          "total": "2,903.32",
           "currency": "USD"
         }
       }
@@ -1157,100 +1385,100 @@
         "invoice_date": "2026-10-25",
         "supplier_name": "Borderless Corp",
         "customer_name": "Table Client Ltd",
-        "subtotal": "26779.37",
-        "tax": "2677.94",
-        "total": "29457.31",
+        "subtotal": "43663.12",
+        "tax": "4366.31",
+        "total": "48029.43",
         "currency": "USD",
         "line_items": [
           {
-            "description": "Consulting Services",
-            "quantity": "20",
-            "unit_price": "45.58",
-            "amount": "911.60"
-          },
-          {
-            "description": "Maintenance",
-            "quantity": "19",
-            "unit_price": "263.78",
-            "amount": "5011.82"
+            "description": "Cloud Hosting",
+            "quantity": "5",
+            "unit_price": "320.37",
+            "amount": "1601.85"
           },
           {
             "description": "Training Session",
-            "quantity": "7",
-            "unit_price": "336.51",
-            "amount": "2355.57"
+            "quantity": "6",
+            "unit_price": "371.91",
+            "amount": "2231.46"
           },
           {
-            "description": "Cloud Hosting",
-            "quantity": "8",
-            "unit_price": "136.48",
-            "amount": "1091.84"
+            "description": "Custom Development",
+            "quantity": "14",
+            "unit_price": "282.65",
+            "amount": "3957.10"
+          },
+          {
+            "description": "Software License",
+            "quantity": "3",
+            "unit_price": "472.80",
+            "amount": "1418.40"
           },
           {
             "description": "Hardware Component",
-            "quantity": "10",
-            "unit_price": "231.33",
-            "amount": "2313.30"
+            "quantity": "18",
+            "unit_price": "22.83",
+            "amount": "410.94"
           },
           {
-            "description": "Software License",
-            "quantity": "1",
-            "unit_price": "231.85",
-            "amount": "231.85"
+            "description": "Cloud Hosting",
+            "quantity": "19",
+            "unit_price": "278.50",
+            "amount": "5291.50"
           },
           {
-            "description": "Maintenance",
-            "quantity": "4",
-            "unit_price": "41.26",
-            "amount": "165.04"
+            "description": "Data Storage",
+            "quantity": "5",
+            "unit_price": "25.71",
+            "amount": "128.55"
+          },
+          {
+            "description": "Cloud Hosting",
+            "quantity": "2",
+            "unit_price": "449.97",
+            "amount": "899.94"
           },
           {
             "description": "Support Contract",
-            "quantity": "17",
-            "unit_price": "136.27",
-            "amount": "2316.59"
+            "quantity": "8",
+            "unit_price": "335.13",
+            "amount": "2681.04"
           },
           {
             "description": "Cloud Hosting",
-            "quantity": "3",
-            "unit_price": "440.24",
-            "amount": "1320.72"
-          },
-          {
-            "description": "Cloud Hosting",
-            "quantity": "10",
-            "unit_price": "83.08",
-            "amount": "830.80"
-          },
-          {
-            "description": "Custom Development",
-            "quantity": "10",
-            "unit_price": "307.78",
-            "amount": "3077.80"
-          },
-          {
-            "description": "Custom Development",
-            "quantity": "1",
-            "unit_price": "335.59",
-            "amount": "335.59"
-          },
-          {
-            "description": "Custom Development",
-            "quantity": "10",
-            "unit_price": "466.22",
-            "amount": "4662.20"
-          },
-          {
-            "description": "Software License",
-            "quantity": "5",
-            "unit_price": "135.91",
-            "amount": "679.55"
-          },
-          {
-            "description": "Software License",
             "quantity": "18",
-            "unit_price": "81.95",
-            "amount": "1475.10"
+            "unit_price": "442.65",
+            "amount": "7967.70"
+          },
+          {
+            "description": "Data Storage",
+            "quantity": "20",
+            "unit_price": "375.99",
+            "amount": "7519.80"
+          },
+          {
+            "description": "Support Contract",
+            "quantity": "6",
+            "unit_price": "488.22",
+            "amount": "2929.32"
+          },
+          {
+            "description": "Hardware Component",
+            "quantity": "14",
+            "unit_price": "17.27",
+            "amount": "241.78"
+          },
+          {
+            "description": "Cloud Hosting",
+            "quantity": "14",
+            "unit_price": "402.11",
+            "amount": "5629.54"
+          },
+          {
+            "description": "Support Contract",
+            "quantity": "9",
+            "unit_price": "83.80",
+            "amount": "754.20"
           }
         ],
         "printed": {
@@ -1258,9 +1486,9 @@
           "invoice_date": "2026-10-25",
           "supplier_name": "Borderless Corp",
           "customer_name": "Table Client Ltd",
-          "subtotal": "26,779.37",
-          "tax": "2,677.94",
-          "total": "29,457.31",
+          "subtotal": "43,663.12",
+          "tax": "4,366.31",
+          "total": "48,029.43",
           "currency": "USD"
         }
       }
@@ -1276,21 +1504,21 @@
       {
         "invoice_number": "INV-TC-42-0001",
         "invoice_date": "2026-10-23",
-        "supplier_name": "Allen-Allen",
-        "customer_name": "Arroyo, Miller and Tucker",
-        "subtotal": "8798.31",
-        "tax": "1319.75",
-        "total": "10118.06",
+        "supplier_name": "Robinson, Jones and Welch",
+        "customer_name": "Jones Inc",
+        "subtotal": "8380.52",
+        "tax": "1257.08",
+        "total": "9637.60",
         "currency": "GBP",
         "line_items": [],
         "printed": {
           "invoice_number": "INV-TC-42-0001",
           "invoice_date": "2026-10-23",
-          "supplier_name": "Allen-Allen",
-          "customer_name": "Arroyo, Miller and Tucker",
-          "subtotal": "8,798.31",
-          "tax": "1,319.75",
-          "total": "10,118.06",
+          "supplier_name": "Robinson, Jones and Welch",
+          "customer_name": "Jones Inc",
+          "subtotal": "8,380.52",
+          "tax": "1,257.08",
+          "total": "9,637.60",
           "currency": "GBP"
         }
       }
@@ -3148,5 +3376,1068 @@
     "expect_status": "needs_review",
     "injected": null,
     "invoices": []
+  },
+  {
+    "file": "scanned_clean.pdf",
+    "group": "scanned_pdf",
+    "expect_status": "validated_ok",
+    "injected": null,
+    "invoices": [
+      {
+        "invoice_number": "SCAN-0001",
+        "invoice_date": "2026-11-01",
+        "supplier_name": "ScanCo Ltd",
+        "customer_name": "TestClient Corp",
+        "subtotal": "90.00",
+        "tax": "9.00",
+        "total": "99.00",
+        "currency": "USD",
+        "line_items": [
+          {
+            "description": "Widget",
+            "quantity": "10",
+            "unit_price": "5.00",
+            "amount": "50.00"
+          },
+          {
+            "description": "Gadget",
+            "quantity": "4",
+            "unit_price": "10.00",
+            "amount": "40.00"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "file": "scanned_mild.pdf",
+    "group": "scanned_pdf",
+    "expect_status": "validated_ok",
+    "injected": null,
+    "invoices": [
+      {
+        "invoice_number": "SCAN-0001",
+        "invoice_date": "2026-11-01",
+        "supplier_name": "ScanCo Ltd",
+        "customer_name": "TestClient Corp",
+        "subtotal": "90.00",
+        "tax": "9.00",
+        "total": "99.00",
+        "currency": "USD",
+        "line_items": [
+          {
+            "description": "Widget",
+            "quantity": "10",
+            "unit_price": "5.00",
+            "amount": "50.00"
+          },
+          {
+            "description": "Gadget",
+            "quantity": "4",
+            "unit_price": "10.00",
+            "amount": "40.00"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "file": "scanned_moderate.pdf",
+    "group": "scanned_pdf",
+    "expect_status": "validated_ok",
+    "injected": null,
+    "invoices": [
+      {
+        "invoice_number": "SCAN-0001",
+        "invoice_date": "2026-11-01",
+        "supplier_name": "ScanCo Ltd",
+        "customer_name": "TestClient Corp",
+        "subtotal": "90.00",
+        "tax": "9.00",
+        "total": "99.00",
+        "currency": "USD",
+        "line_items": [
+          {
+            "description": "Widget",
+            "quantity": "10",
+            "unit_price": "5.00",
+            "amount": "50.00"
+          },
+          {
+            "description": "Gadget",
+            "quantity": "4",
+            "unit_price": "10.00",
+            "amount": "40.00"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "file": "scanned_severe.pdf",
+    "group": "scanned_pdf",
+    "expect_status": "needs_review",
+    "injected": null,
+    "invoices": []
+  },
+  {
+    "file": "scanned_rotated.pdf",
+    "group": "scanned_pdf",
+    "expect_status": "validated_ok",
+    "injected": null,
+    "invoices": [
+      {
+        "invoice_number": "SCAN-0001",
+        "invoice_date": "2026-11-01",
+        "supplier_name": "ScanCo Ltd",
+        "customer_name": "TestClient Corp",
+        "subtotal": "90.00",
+        "tax": "9.00",
+        "total": "99.00",
+        "currency": "USD",
+        "line_items": [
+          {
+            "description": "Widget",
+            "quantity": "10",
+            "unit_price": "5.00",
+            "amount": "50.00"
+          },
+          {
+            "description": "Gadget",
+            "quantity": "4",
+            "unit_price": "10.00",
+            "amount": "40.00"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "file": "scanned_3page.pdf",
+    "group": "scanned_pdf",
+    "expect_status": "validated_ok",
+    "injected": null,
+    "invoices": [
+      {
+        "invoice_number": "SCAN-0001",
+        "invoice_date": "2026-11-01",
+        "supplier_name": "ScanCo Ltd",
+        "customer_name": "TestClient Corp",
+        "subtotal": "90.00",
+        "tax": "9.00",
+        "total": "99.00",
+        "currency": "USD",
+        "line_items": [
+          {
+            "description": "Widget",
+            "quantity": "10",
+            "unit_price": "5.00",
+            "amount": "50.00"
+          },
+          {
+            "description": "Gadget",
+            "quantity": "4",
+            "unit_price": "10.00",
+            "amount": "40.00"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "file": "multi_inv_001.pdf",
+    "group": "multi_invoice",
+    "expect_status": "validated_ok",
+    "injected": null,
+    "invoices": [
+      {
+        "invoice_number": "INV-M1-42-0001",
+        "invoice_date": "2026-11-01",
+        "supplier_name": "Jones-Young",
+        "customer_name": "Washington, Ryan and Cummings",
+        "subtotal": "1903.73",
+        "tax": "190.37",
+        "total": "2094.10",
+        "currency": "USD",
+        "line_items": [
+          {
+            "description": "Support Contract",
+            "quantity": "1",
+            "unit_price": "331.72",
+            "amount": "331.72"
+          },
+          {
+            "description": "Data Storage",
+            "quantity": "11",
+            "unit_price": "142.91",
+            "amount": "1572.01"
+          }
+        ],
+        "printed": {
+          "invoice_number": "INV-M1-42-0001",
+          "invoice_date": "2026-11-01",
+          "supplier_name": "Jones-Young",
+          "customer_name": "Washington, Ryan and Cummings",
+          "subtotal": "1,903.73",
+          "tax": "190.37",
+          "total": "2,094.10",
+          "currency": "USD"
+        },
+        "pages": [
+          0
+        ]
+      },
+      {
+        "invoice_number": "INV-M1-42-0002",
+        "invoice_date": "2026-11-02",
+        "supplier_name": "Johnston, Sanchez and Kennedy",
+        "customer_name": "Lee-Davis",
+        "subtotal": "10447.31",
+        "tax": "0.00",
+        "total": "10447.31",
+        "currency": "EUR",
+        "line_items": [
+          {
+            "description": "Custom Development",
+            "quantity": "13",
+            "unit_price": "341.36",
+            "amount": "4437.68"
+          },
+          {
+            "description": "Custom Development",
+            "quantity": "11",
+            "unit_price": "469.92",
+            "amount": "5169.12"
+          },
+          {
+            "description": "Software License",
+            "quantity": "9",
+            "unit_price": "93.39",
+            "amount": "840.51"
+          }
+        ],
+        "printed": {
+          "invoice_number": "INV-M1-42-0002",
+          "invoice_date": "2026-11-02",
+          "supplier_name": "Johnston, Sanchez and Kennedy",
+          "customer_name": "Lee-Davis",
+          "subtotal": "10,447.31",
+          "tax": "0.00",
+          "total": "10,447.31",
+          "currency": "EUR"
+        },
+        "pages": [
+          1
+        ]
+      },
+      {
+        "invoice_number": "INV-M1-42-0003",
+        "invoice_date": "2026-11-03",
+        "supplier_name": "Gomez-Jenkins",
+        "customer_name": "Brown, Valdez and Lucas",
+        "subtotal": "6736.66",
+        "tax": "0.00",
+        "total": "6736.66",
+        "currency": "GBP",
+        "line_items": [
+          {
+            "description": "Maintenance",
+            "quantity": "14",
+            "unit_price": "176.12",
+            "amount": "2465.68"
+          },
+          {
+            "description": "Cloud Hosting",
+            "quantity": "14",
+            "unit_price": "305.07",
+            "amount": "4270.98"
+          }
+        ],
+        "printed": {
+          "invoice_number": "INV-M1-42-0003",
+          "invoice_date": "2026-11-03",
+          "supplier_name": "Gomez-Jenkins",
+          "customer_name": "Brown, Valdez and Lucas",
+          "subtotal": "6,736.66",
+          "tax": "0.00",
+          "total": "6,736.66",
+          "currency": "GBP"
+        },
+        "pages": [
+          2
+        ]
+      }
+    ],
+    "page_ranges": [
+      {
+        "inv_number": "INV-M1-42-0001",
+        "pages": [
+          0
+        ]
+      },
+      {
+        "inv_number": "INV-M1-42-0002",
+        "pages": [
+          1
+        ]
+      },
+      {
+        "inv_number": "INV-M1-42-0003",
+        "pages": [
+          2
+        ]
+      }
+    ]
+  },
+  {
+    "file": "multi_inv_002.pdf",
+    "group": "multi_invoice",
+    "expect_status": "validated_ok",
+    "injected": null,
+    "invoices": [
+      {
+        "invoice_number": "INV-M2-42-0001",
+        "invoice_date": "2026-11-04",
+        "supplier_name": "Powell LLC",
+        "customer_name": "Wright and Sons",
+        "subtotal": "10731.47",
+        "tax": "2146.29",
+        "total": "12877.76",
+        "currency": "EUR",
+        "line_items": [
+          {
+            "description": "Maintenance",
+            "quantity": "7",
+            "unit_price": "131.09",
+            "amount": "917.63"
+          },
+          {
+            "description": "Data Storage",
+            "quantity": "1",
+            "unit_price": "262.36",
+            "amount": "262.36"
+          },
+          {
+            "description": "Custom Development",
+            "quantity": "7",
+            "unit_price": "185.29",
+            "amount": "1297.03"
+          },
+          {
+            "description": "Software License",
+            "quantity": "11",
+            "unit_price": "313.46",
+            "amount": "3448.06"
+          },
+          {
+            "description": "Software License",
+            "quantity": "10",
+            "unit_price": "256.03",
+            "amount": "2560.30"
+          },
+          {
+            "description": "Data Storage",
+            "quantity": "11",
+            "unit_price": "204.19",
+            "amount": "2246.09"
+          }
+        ],
+        "printed": {
+          "invoice_number": "INV-M2-42-0001",
+          "invoice_date": "2026-11-04",
+          "supplier_name": "Powell LLC",
+          "customer_name": "Wright and Sons",
+          "subtotal": "10,731.47",
+          "tax": "2,146.29",
+          "total": "12,877.76",
+          "currency": "EUR"
+        },
+        "pages": [
+          0
+        ]
+      },
+      {
+        "invoice_number": "INV-M2-42-0002",
+        "invoice_date": "2026-11-05",
+        "supplier_name": "West, Henderson and Ramirez",
+        "customer_name": "Baxter Inc",
+        "subtotal": "11597.23",
+        "tax": "2319.45",
+        "total": "13916.68",
+        "currency": "EUR",
+        "line_items": [
+          {
+            "description": "Support Contract",
+            "quantity": "14",
+            "unit_price": "334.14",
+            "amount": "4677.96"
+          },
+          {
+            "description": "Data Storage",
+            "quantity": "6",
+            "unit_price": "309.68",
+            "amount": "1858.08"
+          },
+          {
+            "description": "Training Session",
+            "quantity": "13",
+            "unit_price": "276.23",
+            "amount": "3590.99"
+          },
+          {
+            "description": "Consulting Services",
+            "quantity": "10",
+            "unit_price": "147.02",
+            "amount": "1470.20"
+          }
+        ],
+        "printed": {
+          "invoice_number": "INV-M2-42-0002",
+          "invoice_date": "2026-11-05",
+          "supplier_name": "West, Henderson and Ramirez",
+          "customer_name": "Baxter Inc",
+          "subtotal": "11,597.23",
+          "tax": "2,319.45",
+          "total": "13,916.68",
+          "currency": "EUR"
+        },
+        "pages": [
+          1,
+          2
+        ]
+      },
+      {
+        "invoice_number": "INV-M2-42-0003",
+        "invoice_date": "2026-11-06",
+        "supplier_name": "Morton-Chase",
+        "customer_name": "Williams PLC",
+        "subtotal": "9586.90",
+        "tax": "479.35",
+        "total": "10066.24",
+        "currency": "USD",
+        "line_items": [
+          {
+            "description": "API Access",
+            "quantity": "15",
+            "unit_price": "223.87",
+            "amount": "3358.05"
+          },
+          {
+            "description": "Support Contract",
+            "quantity": "17",
+            "unit_price": "239.23",
+            "amount": "4066.91"
+          },
+          {
+            "description": "Hardware Component",
+            "quantity": "3",
+            "unit_price": "145.47",
+            "amount": "436.41"
+          },
+          {
+            "description": "Maintenance",
+            "quantity": "11",
+            "unit_price": "51.23",
+            "amount": "563.53"
+          },
+          {
+            "description": "Support Contract",
+            "quantity": "10",
+            "unit_price": "116.20",
+            "amount": "1162.00"
+          }
+        ],
+        "printed": {
+          "invoice_number": "INV-M2-42-0003",
+          "invoice_date": "2026-11-06",
+          "supplier_name": "Morton-Chase",
+          "customer_name": "Williams PLC",
+          "subtotal": "9,586.90",
+          "tax": "479.35",
+          "total": "10,066.24",
+          "currency": "USD"
+        },
+        "pages": [
+          3
+        ]
+      }
+    ],
+    "page_ranges": [
+      {
+        "inv_number": "INV-M2-42-0001",
+        "pages": [
+          0
+        ]
+      },
+      {
+        "inv_number": "INV-M2-42-0002",
+        "pages": [
+          1,
+          2
+        ]
+      },
+      {
+        "inv_number": "INV-M2-42-0003",
+        "pages": [
+          3
+        ]
+      }
+    ]
+  },
+  {
+    "file": "multi_inv_003.pdf",
+    "group": "multi_invoice",
+    "expect_status": "validated_ok",
+    "injected": null,
+    "invoices": [
+      {
+        "invoice_number": "INV-M3-42-0001",
+        "invoice_date": "2026-11-08",
+        "supplier_name": "Novak and Sons",
+        "customer_name": "Russell Group",
+        "subtotal": "10397.03",
+        "tax": "0.00",
+        "total": "10397.03",
+        "currency": "USD",
+        "line_items": [
+          {
+            "description": "Consulting Services",
+            "quantity": "8",
+            "unit_price": "492.05",
+            "amount": "3936.40"
+          },
+          {
+            "description": "Maintenance",
+            "quantity": "3",
+            "unit_price": "230.43",
+            "amount": "691.29"
+          },
+          {
+            "description": "Maintenance",
+            "quantity": "7",
+            "unit_price": "360.58",
+            "amount": "2524.06"
+          },
+          {
+            "description": "Data Storage",
+            "quantity": "16",
+            "unit_price": "202.83",
+            "amount": "3245.28"
+          }
+        ],
+        "printed": {
+          "invoice_number": "INV-M3-42-0001",
+          "invoice_date": "2026-11-08",
+          "supplier_name": "Novak and Sons",
+          "customer_name": "Russell Group",
+          "subtotal": "10,397.03",
+          "tax": "0.00",
+          "total": "10,397.03",
+          "currency": "USD"
+        },
+        "pages": [
+          0
+        ]
+      },
+      {
+        "invoice_number": "INV-M3-42-0002",
+        "invoice_date": "2026-11-09",
+        "supplier_name": "Hancock Inc",
+        "customer_name": "Gray Group",
+        "subtotal": "10506.35",
+        "tax": "1050.63",
+        "total": "11556.99",
+        "currency": "GBP",
+        "line_items": [
+          {
+            "description": "Data Storage",
+            "quantity": "8",
+            "unit_price": "92.06",
+            "amount": "736.48"
+          },
+          {
+            "description": "Custom Development",
+            "quantity": "15",
+            "unit_price": "29.86",
+            "amount": "447.90"
+          },
+          {
+            "description": "Support Contract",
+            "quantity": "4",
+            "unit_price": "230.95",
+            "amount": "923.80"
+          },
+          {
+            "description": "API Access",
+            "quantity": "17",
+            "unit_price": "494.01",
+            "amount": "8398.17"
+          }
+        ],
+        "printed": {
+          "invoice_number": "INV-M3-42-0002",
+          "invoice_date": "2026-11-09",
+          "supplier_name": "Hancock Inc",
+          "customer_name": "Gray Group",
+          "subtotal": "10,506.35",
+          "tax": "1,050.63",
+          "total": "11,556.99",
+          "currency": "GBP"
+        },
+        "pages": [
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "invoice_number": "INV-M3-42-0003",
+        "invoice_date": "2026-11-10",
+        "supplier_name": "House-Glover",
+        "customer_name": "Henderson-Bernard",
+        "subtotal": "22679.19",
+        "tax": "4535.84",
+        "total": "27215.03",
+        "currency": "EUR",
+        "line_items": [
+          {
+            "description": "Maintenance",
+            "quantity": "17",
+            "unit_price": "216.24",
+            "amount": "3676.08"
+          },
+          {
+            "description": "Custom Development",
+            "quantity": "15",
+            "unit_price": "449.12",
+            "amount": "6736.80"
+          },
+          {
+            "description": "API Access",
+            "quantity": "15",
+            "unit_price": "133.30",
+            "amount": "1999.50"
+          },
+          {
+            "description": "Support Contract",
+            "quantity": "9",
+            "unit_price": "384.08",
+            "amount": "3456.72"
+          },
+          {
+            "description": "Custom Development",
+            "quantity": "16",
+            "unit_price": "315.24",
+            "amount": "5043.84"
+          },
+          {
+            "description": "Training Session",
+            "quantity": "15",
+            "unit_price": "43.35",
+            "amount": "650.25"
+          },
+          {
+            "description": "Training Session",
+            "quantity": "8",
+            "unit_price": "139.50",
+            "amount": "1116.00"
+          }
+        ],
+        "printed": {
+          "invoice_number": "INV-M3-42-0003",
+          "invoice_date": "2026-11-10",
+          "supplier_name": "House-Glover",
+          "customer_name": "Henderson-Bernard",
+          "subtotal": "22,679.19",
+          "tax": "4,535.84",
+          "total": "27,215.03",
+          "currency": "EUR"
+        },
+        "pages": [
+          4,
+          5
+        ]
+      },
+      {
+        "invoice_number": "INV-M3-42-0004",
+        "invoice_date": "2026-11-11",
+        "supplier_name": "Stanley, Tucker and Lee",
+        "customer_name": "Novak PLC",
+        "subtotal": "4079.13",
+        "tax": "611.87",
+        "total": "4691.00",
+        "currency": "EUR",
+        "line_items": [
+          {
+            "description": "Hardware Component",
+            "quantity": "5",
+            "unit_price": "119.47",
+            "amount": "597.35"
+          },
+          {
+            "description": "Hardware Component",
+            "quantity": "7",
+            "unit_price": "36.79",
+            "amount": "257.53"
+          },
+          {
+            "description": "Data Storage",
+            "quantity": "11",
+            "unit_price": "273.59",
+            "amount": "3009.49"
+          },
+          {
+            "description": "Data Storage",
+            "quantity": "2",
+            "unit_price": "107.38",
+            "amount": "214.76"
+          }
+        ],
+        "printed": {
+          "invoice_number": "INV-M3-42-0004",
+          "invoice_date": "2026-11-11",
+          "supplier_name": "Stanley, Tucker and Lee",
+          "customer_name": "Novak PLC",
+          "subtotal": "4,079.13",
+          "tax": "611.87",
+          "total": "4,691.00",
+          "currency": "EUR"
+        },
+        "pages": [
+          6
+        ]
+      }
+    ],
+    "page_ranges": [
+      {
+        "inv_number": "INV-M3-42-0001",
+        "pages": [
+          0
+        ]
+      },
+      {
+        "inv_number": "INV-M3-42-0002",
+        "pages": [
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "inv_number": "INV-M3-42-0003",
+        "pages": [
+          4,
+          5
+        ]
+      },
+      {
+        "inv_number": "INV-M3-42-0004",
+        "pages": [
+          6
+        ]
+      }
+    ]
+  },
+  {
+    "file": "wrong_total_001.pdf",
+    "group": "injected",
+    "expect_status": "needs_review",
+    "injected": {
+      "code": "ARITH_TOTAL"
+    },
+    "invoices": [
+      {
+        "invoice_number": "INV-WT-42-0001",
+        "invoice_date": "2026-11-01",
+        "supplier_name": "Daniels, Adkins and Brown",
+        "customer_name": "Woods, Calhoun and Schmidt",
+        "subtotal": "18294.51",
+        "tax": "1829.45",
+        "total": "20124.96",
+        "currency": "USD",
+        "line_items": [
+          {
+            "description": "Consulting Services",
+            "quantity": "19",
+            "unit_price": "193.29",
+            "amount": "3672.51"
+          },
+          {
+            "description": "Consulting Services",
+            "quantity": "12",
+            "unit_price": "152.81",
+            "amount": "1833.72"
+          },
+          {
+            "description": "Data Storage",
+            "quantity": "14",
+            "unit_price": "271.42",
+            "amount": "3799.88"
+          },
+          {
+            "description": "Custom Development",
+            "quantity": "20",
+            "unit_price": "449.42",
+            "amount": "8988.40"
+          }
+        ],
+        "printed": {
+          "invoice_number": "INV-WT-42-0001",
+          "invoice_date": "2026-11-01",
+          "supplier_name": "Daniels, Adkins and Brown",
+          "customer_name": "Woods, Calhoun and Schmidt",
+          "subtotal": "18,294.51",
+          "tax": "1,829.45",
+          "total": "20,124.96",
+          "currency": "USD"
+        }
+      }
+    ]
+  },
+  {
+    "file": "wrong_total_002.pdf",
+    "group": "injected",
+    "expect_status": "needs_review",
+    "injected": {
+      "code": "ARITH_TOTAL"
+    },
+    "invoices": [
+      {
+        "invoice_number": "INV-WT-42-0002",
+        "invoice_date": "2026-11-02",
+        "supplier_name": "Yu Inc",
+        "customer_name": "Jones Inc",
+        "subtotal": "6740.90",
+        "tax": "674.09",
+        "total": "7415.99",
+        "currency": "USD",
+        "line_items": [
+          {
+            "description": "Support Contract",
+            "quantity": "9",
+            "unit_price": "220.74",
+            "amount": "1986.66"
+          },
+          {
+            "description": "Consulting Services",
+            "quantity": "13",
+            "unit_price": "171.38",
+            "amount": "2227.94"
+          },
+          {
+            "description": "Data Storage",
+            "quantity": "6",
+            "unit_price": "421.05",
+            "amount": "2526.30"
+          }
+        ],
+        "printed": {
+          "invoice_number": "INV-WT-42-0002",
+          "invoice_date": "2026-11-02",
+          "supplier_name": "Yu Inc",
+          "customer_name": "Jones Inc",
+          "subtotal": "6,740.90",
+          "tax": "674.09",
+          "total": "7,415.99",
+          "currency": "USD"
+        }
+      }
+    ]
+  },
+  {
+    "file": "wrong_total_003.pdf",
+    "group": "injected",
+    "expect_status": "needs_review",
+    "injected": {
+      "code": "ARITH_TOTAL"
+    },
+    "invoices": [
+      {
+        "invoice_number": "INV-WT-42-0003",
+        "invoice_date": "2026-11-03",
+        "supplier_name": "Hensley, Powell and David",
+        "customer_name": "Sanchez, Wheeler and Harvey",
+        "subtotal": "5733.33",
+        "tax": "573.33",
+        "total": "6307.66",
+        "currency": "USD",
+        "line_items": [
+          {
+            "description": "Maintenance",
+            "quantity": "18",
+            "unit_price": "18.35",
+            "amount": "330.30"
+          },
+          {
+            "description": "Data Storage",
+            "quantity": "19",
+            "unit_price": "284.37",
+            "amount": "5403.03"
+          }
+        ],
+        "printed": {
+          "invoice_number": "INV-WT-42-0003",
+          "invoice_date": "2026-11-03",
+          "supplier_name": "Hensley, Powell and David",
+          "customer_name": "Sanchez, Wheeler and Harvey",
+          "subtotal": "5,733.33",
+          "tax": "573.33",
+          "total": "6,307.66",
+          "currency": "USD"
+        }
+      }
+    ]
+  },
+  {
+    "file": "dup_invnum_001.pdf",
+    "group": "injected",
+    "expect_status": "needs_review",
+    "injected": {
+      "code": "DUPLICATE_INVOICE"
+    },
+    "invoices": [
+      {
+        "invoice_number": "INV-A-42-0001",
+        "invoice_date": "2026-11-04",
+        "supplier_name": "Rodriguez, Figueroa and Sanchez",
+        "customer_name": "Duplicate Customer",
+        "subtotal": null,
+        "tax": null,
+        "total": "2495.86",
+        "currency": "GBP",
+        "line_items": [],
+        "printed": {
+          "invoice_number": "INV-A-42-0001",
+          "invoice_date": "2026-11-04",
+          "supplier_name": "Rodriguez, Figueroa and Sanchez",
+          "customer_name": "Duplicate Customer",
+          "total": "2,495.86",
+          "currency": "GBP"
+        }
+      }
+    ]
+  },
+  {
+    "file": "dup_invnum_002.pdf",
+    "group": "injected",
+    "expect_status": "needs_review",
+    "injected": {
+      "code": "DUPLICATE_INVOICE"
+    },
+    "invoices": [
+      {
+        "invoice_number": "INV-A-42-0001",
+        "invoice_date": "2026-11-05",
+        "supplier_name": "Rodriguez, Figueroa and Sanchez",
+        "customer_name": "Duplicate Customer",
+        "subtotal": null,
+        "tax": null,
+        "total": "2495.86",
+        "currency": "GBP",
+        "line_items": [],
+        "printed": {
+          "invoice_number": "INV-A-42-0001",
+          "invoice_date": "2026-11-05",
+          "supplier_name": "Rodriguez, Figueroa and Sanchez",
+          "customer_name": "Duplicate Customer",
+          "total": "2,495.86",
+          "currency": "GBP"
+        }
+      }
+    ]
+  },
+  {
+    "file": "missing_invnum_001.pdf",
+    "group": "injected",
+    "expect_status": "needs_review",
+    "injected": {
+      "code": "MISSING_REQUIRED"
+    },
+    "invoices": [
+      {
+        "invoice_number": null,
+        "invoice_date": "2026-11-06",
+        "supplier_name": "Edwards, Baker and Anderson",
+        "customer_name": "Evans, Stewart and Walton",
+        "subtotal": "1189.72",
+        "tax": "118.97",
+        "total": "1308.69",
+        "currency": "USD",
+        "line_items": [
+          {
+            "description": "Software License",
+            "quantity": "14",
+            "unit_price": "72.17",
+            "amount": "1010.38"
+          },
+          {
+            "description": "API Access",
+            "quantity": "6",
+            "unit_price": "29.89",
+            "amount": "179.34"
+          }
+        ],
+        "printed": {
+          "invoice_number": null,
+          "invoice_date": "2026-11-06",
+          "supplier_name": "Edwards, Baker and Anderson",
+          "customer_name": "Evans, Stewart and Walton",
+          "subtotal": "1,189.72",
+          "tax": "118.97",
+          "total": "1,308.69",
+          "currency": "USD"
+        }
+      }
+    ]
+  },
+  {
+    "file": "missing_invnum_002.pdf",
+    "group": "injected",
+    "expect_status": "needs_review",
+    "injected": {
+      "code": "MISSING_REQUIRED"
+    },
+    "invoices": [
+      {
+        "invoice_number": null,
+        "invoice_date": "2026-11-07",
+        "supplier_name": "Smith PLC",
+        "customer_name": "Ferrell, Jones and Lewis",
+        "subtotal": "7230.70",
+        "tax": "723.07",
+        "total": "7953.77",
+        "currency": "USD",
+        "line_items": [
+          {
+            "description": "Cloud Hosting",
+            "quantity": "7",
+            "unit_price": "230.08",
+            "amount": "1610.56"
+          },
+          {
+            "description": "Cloud Hosting",
+            "quantity": "13",
+            "unit_price": "142.74",
+            "amount": "1855.62"
+          },
+          {
+            "description": "Data Storage",
+            "quantity": "9",
+            "unit_price": "418.28",
+            "amount": "3764.52"
+          }
+        ],
+        "printed": {
+          "invoice_number": null,
+          "invoice_date": "2026-11-07",
+          "supplier_name": "Smith PLC",
+          "customer_name": "Ferrell, Jones and Lewis",
+          "subtotal": "7,230.70",
+          "tax": "723.07",
+          "total": "7,953.77",
+          "currency": "USD"
+        }
+      }
+    ]
   }
 ]
