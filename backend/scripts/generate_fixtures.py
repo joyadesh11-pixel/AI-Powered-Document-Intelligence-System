@@ -20,6 +20,8 @@ import zipfile
 from pathlib import Path
 from typing import Any
 
+import numpy as np
+import cv2
 import fitz  # PyMuPDF
 from faker import Faker
 from PIL import Image, ImageDraw, ImageFont
@@ -1540,6 +1542,172 @@ def _make_perf_5000x30(path: Path, r) -> None:
 
 # ------------------------------------------------------------------ main generator
 
+# ------------------------------------------------------------------ M5 scan constants
+
+_SCAN_INV_NUMBER = "SCAN-0001"
+_SCAN_INV_DATE = "2026-11-01"
+_SCAN_SUPPLIER = "ScanCo Ltd"
+_SCAN_CUSTOMER = "TestClient Corp"
+_SCAN_TOTAL = "99.00"
+_SCAN_SUBTOTAL = "90.00"
+_SCAN_TAX = "9.00"
+
+# Ground-truth record shared by all readable scan fixtures
+SCAN_GT_INVOICE = {
+    "invoice_number": _SCAN_INV_NUMBER,
+    "invoice_date": _SCAN_INV_DATE,
+    "supplier_name": _SCAN_SUPPLIER,
+    "customer_name": _SCAN_CUSTOMER,
+    "subtotal": _SCAN_SUBTOTAL,
+    "tax": _SCAN_TAX,
+    "total": _SCAN_TOTAL,
+    "currency": "USD",
+    "line_items": [
+        {"description": "Widget", "quantity": "10", "unit_price": "5.00", "amount": "50.00"},
+        {"description": "Gadget", "quantity": "4", "unit_price": "10.00", "amount": "40.00"},
+    ],
+}
+
+
+def _make_scan_base_pdf(path: Path) -> None:
+    """Single-page reportlab invoice with known fields at readable 11-pt body text."""
+    from reportlab.pdfgen import canvas as rl_canvas
+    c = rl_canvas.Canvas(str(path), pagesize=(612, 792))
+    c.setFont("Helvetica-Bold", 16)
+    c.drawString(220, 740, "INVOICE")
+    c.setFont("Helvetica", 11)
+    lines = [
+        f"Invoice Number: {_SCAN_INV_NUMBER}",
+        f"Invoice Date: {_SCAN_INV_DATE}",
+        f"Supplier: {_SCAN_SUPPLIER}",
+        f"Customer: {_SCAN_CUSTOMER}",
+        "Currency: USD",
+        "",
+        "Description          Qty    Unit Price    Amount",
+        "-----------------------------------------------------",
+        "Widget                10       5.00        50.00",
+        "Gadget                 4      10.00        40.00",
+        "",
+        f"Subtotal:  {_SCAN_SUBTOTAL}",
+        f"Tax (10%):  {_SCAN_TAX}",
+        f"Total:     {_SCAN_TOTAL}",
+    ]
+    y = 700
+    for line in lines:
+        c.drawString(80, y, line)
+        y -= 20
+    c.save()
+
+
+def _render_first_page_to_png(pdf_path: Path, out_path: Path, dpi: int = 250) -> None:
+    """Render first page of a PDF to an RGB PNG at the given DPI."""
+    doc = fitz.open(str(pdf_path))
+    pix = doc[0].get_pixmap(matrix=fitz.Matrix(dpi / 72, dpi / 72))
+    pix.save(str(out_path))
+    doc.close()
+
+
+def _make_scan_clean_png(path: Path) -> None:
+    """Clean 250 DPI rasterized invoice page."""
+    tmp_pdf = path.with_name(path.stem + "_base.pdf")
+    try:
+        _make_scan_base_pdf(tmp_pdf)
+        _render_first_page_to_png(tmp_pdf, path, dpi=250)
+    finally:
+        if tmp_pdf.exists():
+            tmp_pdf.unlink()
+
+
+def _apply_degradation(src: Path, dst: Path, *,
+                       blur_sigma: float = 0.0,
+                       rotation_deg: float = 0.0,
+                       noise_sigma: float = 0.0,
+                       jpeg_quality: int | None = None) -> None:
+    """Load src PNG, apply degradations, save to dst."""
+    img = np.array(Image.open(str(src)).convert("RGB"))
+    if rotation_deg:
+        h, w = img.shape[:2]
+        M = cv2.getRotationMatrix2D((w / 2, h / 2), -rotation_deg, 1.0)
+        img = cv2.warpAffine(img, M, (w, h), borderValue=(255, 255, 255))
+    if blur_sigma > 0.0:
+        k = max(3, int(blur_sigma * 6) | 1)  # odd kernel
+        img = cv2.GaussianBlur(img, (k, k), blur_sigma)
+    if noise_sigma > 0.0:
+        rng = np.random.RandomState(42)
+        noise = rng.randint(0, int(noise_sigma), img.shape, dtype=np.uint8)
+        img = cv2.add(img, noise)
+    pil_img = Image.fromarray(img)
+    if jpeg_quality is not None:
+        buf = io.BytesIO()
+        pil_img.save(buf, "JPEG", quality=jpeg_quality)
+        buf.seek(0)
+        pil_img = Image.open(buf).copy()
+    pil_img.save(str(dst))
+
+
+def _make_scan_mild_png(path: Path, clean_path: Path) -> None:
+    """Mild: blur σ=0.5, rot 1.5°, light noise, JPEG q=72 artefacts baked in.
+    Laplacian variance ~104 — well above BLUR_VAR_MIN so image_prep keeps it."""
+    _apply_degradation(clean_path, path,
+                       blur_sigma=0.5, rotation_deg=1.5, noise_sigma=10, jpeg_quality=72)
+
+
+def _make_scan_moderate_png(path: Path, clean_path: Path) -> None:
+    """Moderate: blur σ=0.5, rot 3.5°, noise σ=12, JPEG q=68.
+    Raw Laplacian ~105; processed (post-deskew) ~76 — above BLUR_VAR_MIN so image_prep keeps it.
+    More degraded than mild via larger rotation and slightly more noise/compression."""
+    _apply_degradation(clean_path, path,
+                       blur_sigma=0.5, rotation_deg=3.5, noise_sigma=12, jpeg_quality=68)
+
+
+def _make_blurry_severe_png(path: Path, clean_path: Path) -> None:
+    """Severe Gaussian blur σ=20 — unreadable; Laplacian variance << BLUR_VAR_MIN."""
+    _apply_degradation(clean_path, path, blur_sigma=20.0)
+
+
+def _make_rotated_5deg_png(path: Path, clean_path: Path) -> None:
+    """5° clockwise rotation for deskew testing (image_prep T4)."""
+    _apply_degradation(clean_path, path, rotation_deg=5.0)
+
+
+def _make_rotated_90_png(path: Path, clean_path: Path) -> None:
+    """90° rotation for OCR orientation-retry testing (ocr T3)."""
+    img = np.array(Image.open(str(clean_path)))
+    Image.fromarray(np.rot90(img)).save(str(path))
+
+
+def _make_tiny_300px_png(path: Path, clean_path: Path) -> None:
+    """Resize clean scan to 300×300 px — side_px < MIN_SIDE_PX."""
+    Image.open(str(clean_path)).resize((300, 300), Image.LANCZOS).save(str(path))
+
+
+def _make_exif_rotated_jpg_m5(path: Path, clean_path: Path) -> None:
+    """Pixels stored rotated 90° CCW + EXIF Orientation=6.
+
+    Orientation 6 tells PIL exif_transpose to apply ROTATE_270 (=90° CW) to
+    recover the natural portrait orientation.  Stored as landscape on disk;
+    image_prep's exif_transpose should produce a portrait image (h > w).
+    """
+    img = Image.open(str(clean_path)).convert("RGB")
+    # Rotate pixels 90° CCW so the image is stored sideways (landscape)
+    rotated = img.transpose(Image.Transpose.ROTATE_90)
+    exif = Image.Exif()
+    exif[0x0112] = 6  # Orientation: rotate 90° CW to correct (ROTATE_270 in PIL)
+    rotated.save(str(path), "JPEG", quality=90, exif=exif.tobytes())
+
+
+def _make_3frame_scan_tiff(path: Path, clean_path: Path) -> None:
+    """3-frame TIFF; each frame is a copy of the clean scan page."""
+    base = Image.open(str(clean_path)).convert("RGB")
+    frames = [base.copy() for _ in range(3)]
+    frames[0].save(str(path), format="TIFF", save_all=True, append_images=frames[1:])
+
+
+def _make_blank_scan_png(path: Path) -> None:
+    """White 800×1100 image — no text; for blank-page OCR test."""
+    Image.new("RGB", (800, 1100), color=(255, 255, 255)).save(str(path))
+
+
 def generate_fixtures(out_dir: Path, seed: int = 42) -> list[dict]:
     """Generate all fixture files into out_dir. Returns list of ground-truth records."""
     out_dir = Path(out_dir)
@@ -2016,6 +2184,51 @@ def generate_fixtures(out_dir: Path, seed: int = 42) -> list[dict]:
         _make_perf_5000x30(perf_path, r)
     gt.append({"file": "perf_5000x30.xlsx", "group": "sheet_m4_perf",
                "expect_status": "needs_review", "injected": None, "invoices": []})
+
+    # ---- M5 scan image fixtures ----
+
+    _scan_clean_path = out_dir / "scan_clean.png"
+    _make_scan_clean_png(_scan_clean_path)
+    gt.append({"file": "scan_clean.png", "group": "image_m5", "expect_status": "validated_ok",
+               "injected": None, "invoices": [SCAN_GT_INVOICE]})
+
+    _scan_mild_path = out_dir / "scan_mild.png"
+    _make_scan_mild_png(_scan_mild_path, _scan_clean_path)
+    gt.append({"file": "scan_mild.png", "group": "image_m5", "expect_status": "validated_ok",
+               "injected": None, "invoices": [SCAN_GT_INVOICE]})
+
+    _scan_moderate_path = out_dir / "scan_moderate.png"
+    _make_scan_moderate_png(_scan_moderate_path, _scan_clean_path)
+    gt.append({"file": "scan_moderate.png", "group": "image_m5", "expect_status": "validated_ok",
+               "injected": None, "invoices": [SCAN_GT_INVOICE]})
+
+    _make_blurry_severe_png(out_dir / "blurry_severe.png", _scan_clean_path)
+    gt.append({"file": "blurry_severe.png", "group": "image_m5", "expect_status": "needs_review",
+               "injected": None, "invoices": []})
+
+    _make_rotated_5deg_png(out_dir / "rotated_5deg.png", _scan_clean_path)
+    gt.append({"file": "rotated_5deg.png", "group": "image_m5", "expect_status": "validated_ok",
+               "injected": None, "invoices": [SCAN_GT_INVOICE]})
+
+    _make_rotated_90_png(out_dir / "rotated_90.png", _scan_clean_path)
+    gt.append({"file": "rotated_90.png", "group": "image_m5", "expect_status": "validated_ok",
+               "injected": None, "invoices": [SCAN_GT_INVOICE]})
+
+    _make_tiny_300px_png(out_dir / "tiny_300px.png", _scan_clean_path)
+    gt.append({"file": "tiny_300px.png", "group": "image_m5", "expect_status": "needs_review",
+               "injected": None, "invoices": []})
+
+    _make_exif_rotated_jpg_m5(out_dir / "exif_rotated.jpg", _scan_clean_path)
+    gt.append({"file": "exif_rotated.jpg", "group": "image_m5", "expect_status": "validated_ok",
+               "injected": None, "invoices": [SCAN_GT_INVOICE]})
+
+    _make_3frame_scan_tiff(out_dir / "scan_3frame.tiff", _scan_clean_path)
+    gt.append({"file": "scan_3frame.tiff", "group": "image_m5", "expect_status": "validated_ok",
+               "injected": None, "invoices": [SCAN_GT_INVOICE]})
+
+    _make_blank_scan_png(out_dir / "blank.png")
+    gt.append({"file": "blank.png", "group": "image_m5", "expect_status": "needs_review",
+               "injected": None, "invoices": []})
 
     # ---- write ground truth ----
     gt_json = json.dumps(gt, indent=2)

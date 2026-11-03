@@ -80,6 +80,7 @@ One escalation maximum; after that a human reviews.
 | D10 | RapidOCR first, Tesseract fallback | pip-only on Windows, ONNX speed |
 | D11 | Docker Compose for infra only | reviewer can run in minutes; app runs locally |
 | D12 | Optional API-key auth, upload limits, magic-byte validation | proportionate security for the scope; RBAC listed as future work |
+| D13 | numpy + opencv-python-headless for deskew and blur scoring (M5) | pip-only on Windows; headless avoids GUI dependency; numpy already required by rapidocr |
 
 ## Scalability story (qualitative; measured numbers go in the eval report)
 1,000 pages/day is about 2 pages/min over 8 hours, so one worker suffices; the design scales by

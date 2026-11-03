@@ -36,6 +36,7 @@ class Deps(TypedDict, total=False):
     llm: "LLMClient"
     seen_store: Any     # callable(file_hash) -> bool  (duplicate check)
     mapping_cache: Any  # callable(header_hash) -> SheetMapping | None
+    image_temp_dir: str  # M5: temp dir for page PNGs, created by process(); cleaned on exit
 
 
 # ---------------------------------------------------------------------- State
@@ -54,7 +55,8 @@ class State(TypedDict, total=False):
     page_labels: dict[int, str]       # M3: per-page triage label: digital | scanned | garbled
     page_text: dict[int, str]
     page_source: dict[int, str]     # Fix 9: digital|ocr|vision|sheet per page
-    page_images: list[str]          # Fix 9: file paths (never bytes)
+    page_images: dict[int, str]     # M5: {page_idx: png_path} — never bytes
+    image_quality: dict[int, dict]  # M5: {page_idx: {blur, side_px, contrast}}
     tables: dict[int, list]         # page -> list of table markdown strings
 
     # --- acquisition: OCR

@@ -28,7 +28,7 @@ Varied: supplier names, currencies (USD, EUR with decimal comma, GBP, BDT, JPY z
 |---|---|---|
 | Digital PDF | 20 | templates A/B/C evenly |
 | Scanned PDF | 6 | rasterised; mild/moderate/severe: blur, rotation 0-8 degrees, noise, JPEG artefacts |
-| Images | 8 | JPG/PNG/TIFF(multi-frame), quality tiers |
+| Images | 10 | JPG/PNG/TIFF(multi-frame), quality tiers. M5 scan fixtures (all from a single reportlab invoice rasterised at 250 DPI): `scan_clean` (unmodified, Laplacian var≈341), `scan_mild` (GaussianBlur σ=0.5, rot=1.5°, noise σ=10, JPEG q=72; raw var≈104, processed≈71 — above BLUR_VAR_MIN so not flagged), `scan_moderate` (σ=0.5, rot=3.5°, noise σ=12, JPEG q=68; raw var≈106, processed≈72 — the "moderate" tier is **lightly blurred** because higher σ would drop the processed variance below the OCR quality gate; the main distinguishing factor is the larger rotation and slightly heavier noise/compression), `blurry_severe` (σ=20, var≈0.1 — flagged), `tiny_300px` (300×300 px — flagged for side_px), `blank` (white 800×1100, var=0), `exif_rotated` (EXIF Orientation=6, corrected by `exif_transpose`), `rotated_5deg` (5° CW, deskewed to <1.5° residual), `rotated_90` (orientation-retry recovers), `scan_3frame` (3-frame TIFF). |
 | XLSX | 5 | line-grain multi-invoice (200 rows), invoice-grain, multi-sheet same headers, free-form one invoice, odd-header layout |
 | XLS | 1 | legacy |
 | CSV | 3 | utf-8 comma, cp1252 semicolon, free-form |

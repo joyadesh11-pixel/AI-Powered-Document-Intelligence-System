@@ -14,7 +14,7 @@ If behind: cut in this order: frontend polish -> search filters -> API rate limi
 - [x] **M2 Fixtures v0 + intake/fail (45 min).** `generate_fixtures.py` producing the small set (digital A/B, multi-page C, xlsx/csv, bad files) with ground truth; `intake`, `fail`. *Accept:* intake T1-T10. Docs: 05, nodes/intake, nodes/fail.
 - [x] **M3 PDF path (45 min).** `pdf_triage`, `pdf_text`. *Accept:* tests green; line items of clean fixtures reconstructable from tables. Docs: nodes/pdf_triage, pdf_text.
 - [x] **M4 Sheet path (75 min).** `sheet_load, sheet_classify, sheet_map, sheet_transform` with `FakeLLM` first, synonyms table. *Accept:* sheet tests + perf test numbers noted. Docs: nodes/sheet_*.
-- [ ] **M5 Image path (60 min, hard cap 45 on OCR tuning).** `image_prep`, `ocr`. *Accept:* tests green; mean conf and sec/page noted. Docs: nodes/image_prep, ocr.
+- [x] **M5 Image path (60 min, hard cap 45 on OCR tuning).** `image_prep`, `ocr`. *Accept:* tests green; mean conf and sec/page noted. Docs: nodes/image_prep, ocr.
 - [ ] **M6 LLM nodes (90 min).** `llm/client.py` (Gemini), `prompts.py`, `segment`, `llm_extract`, `vision_extract`, `finalize`. *Accept:* unit tests with `FakeLLM`; then `pytest -m live` 4-5 real calls pass. Docs: 03, nodes/segment, llm_extract, vision_extract, finalize.
 - [ ] **M7 End to end in the terminal (60 min).** Remove `sim`; `scripts/run_pipeline.py` prints table (file, type, status, #invoices, issues, seconds, tier); integration tests with real fixtures + `FakeLLM`; full `generate_fixtures.py` (~60 files). *Accept:* **the terminal proof you wanted today**: `python -m scripts.run_pipeline data/fixtures/*` runs, statuses match ground truth for the clean set, no crash on bad files. Tag `v0.1-pipeline`.
 - [ ] **M8 Persistence, API, workers (Nov 3 morning, 3 h).** `db/`, `services/`, `api/`, `workers/`, `docker-compose.yml` (postgres+pgvector, redis), `.env.example`. *Accept:* API tests green; `curl` upload -> poll -> result works with a real worker. Docs: 06.
@@ -40,7 +40,7 @@ After approval: "Implement. Write the tests from the spec first and show them fa
 - [ ] All Drive links open in incognito. Sent before 6 PM Nov 4 (deadline 11 PM; the email itself did not state a time zone).
 - [ ] One sentence on prior LangGraph invoice-verification project, with link.
 
-## M7 cleanup list (carried over from M1, do these in M7, not before)
+## M7 cleanup list (carried over from M1/M5, do these in M7, not before)
 - Remove IssueCode.ARITH_MISMATCH.
 - Remove the dict/Invoice dual handling and the stub "unit" key in validate.
 - Grounding must skip only for page_source in {sheet, vision}, NOT when source_text is empty
@@ -48,3 +48,4 @@ After approval: "Implement. Write the tests from the spec first and show them fa
 - llm_extract GT lookup via sim["gt_invoices"] goes away when M6 real extraction is done.
   real ocr/image_prep must merge into page_text/page_source (append), not replace them.
 - Add a test for _extract_amounts on "Total 1,234.56 EUR 99 Qty 10".
+- Remove `sim.low_conf_units` compat line from `ocr.py` (currently forces scenario 3's pages into low_conf_pages; kept until M7 converts it to FakeLLM + mixed.pdf real OCR).

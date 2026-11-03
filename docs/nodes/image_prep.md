@@ -5,7 +5,7 @@
 - PDF pages: `page.get_pixmap(dpi=OCR_DPI)`; cap the long side at `OCR_MAX_SIDE_PX`.
 - Images: PIL open, `ImageOps.exif_transpose`, TIFF: iterate frames (`seek`). Multi-frame = multiple pages.
 - Grayscale, autocontrast; deskew if estimated skew between 0.5 and 15 degrees (OpenCV `minAreaRect` on binarised text pixels).
-- Quality: blur = variance of Laplacian; `side_px` = long side; contrast = std of gray levels.
+- Quality: blur = variance of Laplacian; `side_px` = long side; contrast = std of gray levels. **Measured on the post-deskew array** (bilinear `warpAffine` introduces a slight blur, so stored blur is a few % lower than the raw image; the gate is still applied to the processed value because that is what the OCR engine actually receives).
 - If `blur < BLUR_VAR_MIN` or `side_px < MIN_SIDE_PX`: add page to `low_conf_pages` with issue `LOW_IMAGE_QUALITY`; skip OCR for it (goes straight to vision).
 **Fallbacks.** A frame that fails to decode -> skip it, warn; if all frames fail -> `CORRUPT_FILE` via error. Colour copy for vision is produced on demand by `vision_extract`, not here.
 **Edge.** Do not store image bytes in state. Temp dir cleaned by the caller (`process()` context manager).

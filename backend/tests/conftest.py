@@ -60,6 +60,18 @@ def fx(fixture_dir: Path) -> dict[str, Path]:
         "csv_utf8":     fixture_dir / "utf8_001.csv",
         "xlsx_freeform_one_invoice": fixture_dir / "freeform_001.xlsx",
         "csv_freeform": fixture_dir / "freeform_001.csv",
+        # M5 scan image fixtures
+        "scan_clean":    fixture_dir / "scan_clean.png",
+        "scan_mild":     fixture_dir / "scan_mild.png",
+        "scan_moderate": fixture_dir / "scan_moderate.png",
+        "blurry_severe": fixture_dir / "blurry_severe.png",
+        "rotated_5deg":  fixture_dir / "rotated_5deg.png",
+        "rotated_90":    fixture_dir / "rotated_90.png",
+        "tiny_300px":    fixture_dir / "tiny_300px.png",
+        "exif_rotated":  fixture_dir / "exif_rotated.jpg",
+        "scan_3frame":   fixture_dir / "scan_3frame.tiff",
+        "blank":         fixture_dir / "blank.png",
+        "scanned_pdf":   fixture_dir / "scanned.pdf",
     }
 
 
