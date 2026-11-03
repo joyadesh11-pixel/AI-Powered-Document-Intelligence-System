@@ -258,7 +258,8 @@ def _std_linegrain() -> SheetMapping:
 
 
 def test_scenario_6_xlsx_tabular_ok(fx, gt):
-    """Scenario 6: standard-header xlsx → validated_ok, 0 LLM calls."""
+    """Scenario 6: standard-header xlsx → validated_ok, 0 LLM calls, tier=sheet."""
+    from app.schemas.models import Tier
     file_path = str(fx["xlsx_simple_linegrain"])
     fake = FakeLLM([])
     deps = Deps(config=None, llm=fake, seen_store=None, mapping_cache=None)
@@ -271,6 +272,11 @@ def test_scenario_6_xlsx_tabular_ok(fx, gt):
     assert len(fake.calls) == 0, (
         f"[scenario 6] expected 0 LLM calls, got {len(fake.calls)}"
     )
+    assert result.invoices, "[scenario 6] expected at least one invoice"
+    for inv in result.invoices:
+        assert inv.tier == Tier.sheet, (
+            f"[scenario 6] invoice tier should be Tier.sheet, got {inv.tier!r}"
+        )
 
 
 # ---- Scenario 7: xlsx_odd_headers — mapping bad once (retry) → validated_ok ----

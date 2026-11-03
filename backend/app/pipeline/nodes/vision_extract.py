@@ -254,24 +254,28 @@ def make_vision_extract(deps: Deps | None = None):
             )
 
             if text_inv is not None:
-                # Re-run validation on BOTH with same ctx (fixed arbitration)
+                # Re-run validation on BOTH with same ctx (fixed arbitration).
+                # seen_store=None so DUPLICATE_INVOICE (non-escalatable) is excluded from
+                # both counts — a dup error cannot be fixed by vision re-extraction.
                 text_errors = _count_errors_via_run_all(text_inv, s, cfg)
                 vision_errors = _count_errors_via_run_all(vision_inv, s, cfg)
 
-                if text_errors < vision_errors:
-                    # Text wins; store vision as alternative
+                if text_errors <= vision_errors:
+                    # Text wins (tie counts as text win — only replace when vision is
+                    # strictly better; this prevents vision from winning solely because
+                    # of non-escalatable errors like DUPLICATE_INVOICE).
                     winner = dict(text_inv)
                     winner.setdefault("alternatives", []).append({
                         "tier": "vision",
-                        "reason": "arbitration: text had fewer errors",
+                        "reason": "arbitration: text won (fewer or equal errors)",
                         "invoice": vision_inv,
                     })
                     new_invoices.append(winner)
                 else:
-                    # Vision wins (tie or fewer errors)
+                    # Vision wins (strictly fewer escalatable errors)
                     vision_inv["alternatives"].append({
                         "tier": text_inv.get("tier", "parser"),
-                        "reason": "arbitration: vision selected (tie or fewer errors)",
+                        "reason": "arbitration: vision selected (fewer errors)",
                         "invoice": text_inv,
                     })
                     new_invoices.append(vision_inv)

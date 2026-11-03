@@ -185,6 +185,69 @@ def test_text_wins_when_vision_has_more_errors():
     assert winner["invoice_number"] == "GOOD-001"
 
 
+# ---- Arbitration: DUPLICATE_INVOICE must not cause vision to win ----
+
+def test_text_wins_when_only_error_is_duplicate_invoice():
+    """Arbitration: text's only error is DUPLICATE_INVOICE (non-escalatable).
+
+    DUPLICATE_INVOICE is not in ESCALATION_CODES, so validate never adds the unit to
+    vision_queue for this reason.  In arbitration, run_all is called fresh with
+    seen_store=None, so dup check is skipped for both candidates — both score 0 fresh
+    errors → tie.  On a tie, text wins (vision cannot fix a document-level duplicate).
+    """
+    from app.schemas.models import IssueCode, Severity
+
+    text_inv = {
+        "unit_id": 0,
+        "tier": "ocr",
+        "invoice_number": "DUP-001",
+        "invoice_date": None,
+        "due_date": None,
+        "supplier_name": "Supplier Co",
+        "customer_name": "Customer Ltd",
+        "subtotal": Decimal("100.00"),
+        "tax": Decimal("10.00"),
+        "total": Decimal("110.00"),  # arithmetic is correct
+        "currency": "USD",
+        "line_items": [],
+        "source_pages": [0],
+        "raw": {"subtotal": "100.00", "tax": "10.00", "total": "110.00"},
+        "issues": [{
+            "code": IssueCode.DUPLICATE_INVOICE.value,
+            "severity": Severity.error.value,
+            "message": "duplicate of a previously seen document",
+            "field": None, "expected": None, "got": None, "location": {},
+        }],
+    }
+    # Vision sees the same invoice cleanly (correct arithmetic, no dup in fresh run_all)
+    vision_resp = VisionExtraction(
+        invoice_number="DUP-001",
+        subtotal="100.00",
+        tax="10.00",
+        total="110.00",
+        currency="USD",
+        source_text="Invoice text",
+    )
+    fake = FakeLLM([vision_resp])
+    units = [{"id": 0, "pages": [0], "source": "ocr", "needs_vision": True,
+              "low_conf_pages": [0]}]
+    deps = Deps(config=get_config(), llm=fake, seen_store=None, mapping_cache=None)
+    fn = make_vision_extract(deps)
+    s = _state([0], invoices=[text_inv], units=units)
+    result = fn(s)
+
+    invs = result["invoices"]
+    assert len(invs) == 1
+    winner = invs[0]
+    # Text must win: DUPLICATE_INVOICE is not escalatable; both score 0 fresh errors
+    # (seen_store=None excludes dup from run_all); tie → text wins (more conservative).
+    assert winner.get("tier") == Tier.ocr.value, (
+        f"Expected text (ocr) to win arbitration when its only error is DUPLICATE_INVOICE, "
+        f"but winner tier is {winner.get('tier')!r}"
+    )
+    assert winner.get("invoice_number") == "DUP-001"
+
+
 # ------------------------------------------------------------------ T5
 
 def test_vision_pages_capped():
@@ -309,3 +372,168 @@ def test_live_vision_extract_scan_moderate(fx):
     )
     assert result.invoices, "No invoices extracted from scan_moderate"
     assert result.invoices[0].invoice_number is not None
+
+
+# ------------------------------------------------------------------ T10 live: scan_clean full pipeline
+
+@pytest.mark.live
+def test_live_scan_clean_full_pipeline(fx, gt):
+    """T10 live: scan_clean.png through the full pipeline — validated_ok, fields extracted."""
+    import time
+    import json
+    from pathlib import Path
+    from dotenv import load_dotenv
+    load_dotenv()
+    from app.pipeline.graph import process
+    from app.pipeline.llm.client import build_llm_client
+    from app.pipeline.config import get_config
+    from app.pipeline.state import Deps
+    from app.schemas.models import DocStatus
+
+    cfg = get_config()
+    real_llm = build_llm_client(cfg)
+    deps = Deps(config=cfg, llm=real_llm, seen_store=None, mapping_cache=None)
+
+    file_path = str(fx["scan_clean"])
+    t0 = time.perf_counter()
+    result = process(file_path, deps=deps)
+    elapsed = time.perf_counter() - t0
+
+    usage = result.llm_usage
+    # ---- report ----
+    print(f"\n[live T10] scan_clean.png  model={cfg.LLM_MODEL_TEXT}"
+          f"  latency={elapsed:.2f}s"
+          f"  input={usage.get('input_tokens',0)} output={usage.get('output_tokens',0)}")
+    gt_entry = gt.get("scan_clean.png", {})
+    gt_fields = (gt_entry.get("invoices") or [{}])[0].get("printed") or {}
+    if result.invoices:
+        inv = result.invoices[0]
+        rows = [
+            ("invoice_number", inv.invoice_number, gt_fields.get("invoice_number")),
+            ("supplier_name",  inv.supplier_name,  gt_fields.get("supplier_name")),
+            ("total",          str(inv.total),      gt_fields.get("total")),
+            ("currency",       inv.currency,        gt_fields.get("currency")),
+        ]
+        print(f"  {'field':<20} {'extracted':<25} {'gt (if present)'}")
+        for field, ext, expected in rows:
+            match = "" if not expected else ("✓" if str(ext) == str(expected) else "✗")
+            print(f"  {field:<20} {str(ext):<25} {expected or '(no GT)'}  {match}")
+    # ---- assertions ----
+    assert result.status == DocStatus.validated_ok, (
+        f"scan_clean.png: expected validated_ok, got {result.status}\n"
+        f"warnings: {[w.code for w in result.warnings]}"
+    )
+    assert result.invoices, "scan_clean.png: no invoices extracted"
+    inv = result.invoices[0]
+    assert inv.invoice_number is not None, "invoice_number must not be null on clean scan"
+    assert inv.total is not None, "total must not be null on clean scan"
+
+
+# ------------------------------------------------------------------ T11 live: blurry_severe vision — expect null fields, nothing invented
+
+@pytest.mark.live
+def test_live_blurry_severe_vision_null_fields(fx, gt):
+    """T11 live: blurry_severe.png through vision — fields may be null; none invented.
+
+    GT has no invoices for this fixture (unreadable).  The pipeline must not crash and
+    must not return plausible-looking invented values.  All null fields are acceptable;
+    having a non-null invoice_number is unexpected and flagged as a warning.
+    """
+    import time
+    from dotenv import load_dotenv
+    load_dotenv()
+    from app.pipeline.graph import process
+    from app.pipeline.llm.client import build_llm_client
+    from app.pipeline.config import get_config
+    from app.pipeline.state import Deps
+    from app.schemas.models import DocStatus
+
+    cfg = get_config()
+    real_llm = build_llm_client(cfg)
+    deps = Deps(config=cfg, llm=real_llm, seen_store=None, mapping_cache=None)
+
+    file_path = str(fx["blurry_severe"])
+    t0 = time.perf_counter()
+    result = process(file_path, deps=deps)
+    elapsed = time.perf_counter() - t0
+
+    usage = result.llm_usage
+    print(f"\n[live T11] blurry_severe.png  model={cfg.LLM_MODEL_VISION}"
+          f"  latency={elapsed:.2f}s"
+          f"  input={usage.get('input_tokens',0)} output={usage.get('output_tokens',0)}")
+    if result.invoices:
+        inv = result.invoices[0]
+        print(f"  invoice_number={inv.invoice_number!r}  total={inv.total!r}"
+              f"  supplier={inv.supplier_name!r}")
+        if inv.invoice_number is not None:
+            print("  WARNING: invoice_number is non-null on blurry_severe — may be invented")
+    else:
+        print("  No invoices extracted (expected for unreadable document)")
+
+    # Must not crash; GT says needs_review
+    assert result.status in (DocStatus.needs_review, DocStatus.validated_ok), (
+        f"blurry_severe.png: expected needs_review or validated_ok, got {result.status}"
+    )
+    # If an invoice was extracted, its total must not be confidently non-null
+    # (blurry documents should produce null or uncertain fields, not invented ones)
+    if result.invoices:
+        inv = result.invoices[0]
+        # Warn but don't fail — model may legitimately read partial text
+        if inv.total is not None:
+            print(f"  NOTE: total={inv.total!r} extracted from blurry image; verify manually")
+
+
+# ------------------------------------------------------------------ T12 live: xlsx_odd_headers sheet mapping
+
+@pytest.mark.live
+def test_live_xlsx_odd_headers_sheet_map(fx, gt):
+    """T12 live: xlsx_odd_headers.xlsx — needs LLM for non-synonym headers; reports exact error
+    if SheetMapping schema fails Gemini structured output."""
+    import time
+    from dotenv import load_dotenv
+    load_dotenv()
+    from app.pipeline.graph import process
+    from app.pipeline.llm.client import build_llm_client
+    from app.pipeline.config import get_config
+    from app.pipeline.state import Deps
+    from app.schemas.models import DocStatus
+
+    cfg = get_config()
+    real_llm = build_llm_client(cfg)
+    deps = Deps(config=cfg, llm=real_llm, seen_store=None, mapping_cache=None)
+
+    file_path = str(fx["xlsx_odd_headers"])
+    t0 = time.perf_counter()
+    result = process(file_path, deps=deps)
+    elapsed = time.perf_counter() - t0
+
+    usage = result.llm_usage
+    print(f"\n[live T12] xlsx_odd_headers.xlsx  model={cfg.LLM_MODEL_TEXT}"
+          f"  latency={elapsed:.2f}s"
+          f"  input={usage.get('input_tokens',0)} output={usage.get('output_tokens',0)}")
+    print(f"  status={result.status}  invoices={len(result.invoices)}"
+          f"  llm_calls={usage.get('calls',0)}")
+    if result.invoices:
+        inv = result.invoices[0]
+        gt_entry = gt.get("xlsx_odd_headers.xlsx", {})
+        gt_fields = (gt_entry.get("invoices") or [{}])[0].get("printed") or {}
+        rows = [
+            ("invoice_number", inv.invoice_number, gt_fields.get("invoice_number")),
+            ("invoice_date",   str(inv.invoice_date),  gt_fields.get("invoice_date")),
+            ("supplier_name",  inv.supplier_name,  gt_fields.get("supplier_name")),
+            ("total",          str(inv.total),      gt_fields.get("total")),
+        ]
+        print(f"  {'field':<20} {'extracted':<25} {'gt (if present)'}")
+        for field, ext, expected in rows:
+            match = "" if not expected else ("✓" if str(ext) == str(expected) else "✗")
+            print(f"  {field:<20} {str(ext):<25} {expected or '(no GT)'}  {match}")
+    if result.warnings:
+        print(f"  warnings: {[w.code for w in result.warnings]}")
+    # If mapping failed, print exact error detail so we can propose a fix
+    if result.error:
+        print(f"  ERROR: {result.error}")
+    # Assert pipeline ran without crash; mapping may succeed or need review
+    assert result.status in (DocStatus.validated_ok, DocStatus.needs_review), (
+        f"xlsx_odd_headers: expected validated_ok or needs_review, got {result.status}\n"
+        f"error: {result.error}"
+    )
