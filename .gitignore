@@ -52,3 +52,5 @@ CLAUDE.local.md
 
 # --- keep these (deliverables) ---
 # eval/ground_truth.json, eval/reports/, docs/, reference/, graph.png
+
+backend/data/
