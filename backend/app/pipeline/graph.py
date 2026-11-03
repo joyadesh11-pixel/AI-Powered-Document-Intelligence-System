@@ -19,8 +19,9 @@ from typing import Any, Iterator
 from langgraph.graph import END, START, StateGraph
 
 from app.pipeline.config import Config, get_config
-from app.pipeline.llm.client import LLMClient, LLMConfigError, RealLLMClient
+from app.pipeline.llm.client import LLMClient, LLMConfigError
 from app.pipeline.state import Deps, State
+from app.schemas.models import ErrorCode
 from app.pipeline.routers import (
     route_after_intake,
     route_after_pdf_text,
@@ -38,9 +39,9 @@ from app.pipeline.nodes.sheet_classify import sheet_classify
 from app.pipeline.nodes.sheet_map import make_sheet_map
 from app.pipeline.nodes.sheet_transform import sheet_transform
 from app.pipeline.nodes.segment import segment
-from app.pipeline.nodes.llm_extract import llm_extract
+from app.pipeline.nodes.llm_extract import make_llm_extract
 from app.pipeline.nodes.validate import make_validate
-from app.pipeline.nodes.vision_extract import vision_extract
+from app.pipeline.nodes.vision_extract import make_vision_extract
 from app.pipeline.nodes.finalize import finalize
 from app.pipeline.nodes.fail import fail
 from app.schemas.models import PipelineResult
@@ -71,6 +72,8 @@ def build_graph(deps: Deps | None = None):
     intake = make_intake(deps)
     sheet_map = make_sheet_map(deps)
     image_prep = make_image_prep(deps)
+    llm_extract = make_llm_extract(deps)
+    vision_extract = make_vision_extract(deps)
 
     # register nodes
     for name, fn in [
@@ -156,7 +159,18 @@ def process(
     with tempfile.TemporaryDirectory(prefix="dociq_imgp_") as tmp:
         d_with_tmp: Deps = {**d, "image_temp_dir": tmp}  # type: ignore[misc]
         graph = build_graph(d_with_tmp)
-        final: State = graph.invoke(_initial_state(file_path, _sim))
+        try:
+            final: State = graph.invoke(_initial_state(file_path, _sim))
+        except LLMConfigError as exc:
+            return PipelineResult.model_validate({
+                "status": "failed",
+                "error_code": ErrorCode.LLM_CONFIG_ERROR.value,
+                "error": str(exc),
+                "file_hash": "", "file_type": "", "size_bytes": 0, "page_count": 0,
+                "invoices": [], "warnings": [], "page_text": {}, "page_source": {},
+                "ocr_conf": {}, "timings": {}, "history": [], "llm_usage": {},
+                "pipeline_version": "0.1.0-m6",
+            })
         return _build_result(final)
 
 

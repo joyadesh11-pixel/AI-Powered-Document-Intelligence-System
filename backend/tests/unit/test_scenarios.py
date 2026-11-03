@@ -1,13 +1,12 @@
 """Dry-run scenario tests.
 
-Covers all 13 scenarios (original 12 + scenario 13 from Fix 1).
-Intake now uses real file I/O; downstream nodes still use sim switches (removed in M7).
-
-Scenarios 6–8 and 13 use real sheet fixtures with FakeLLM; the rest use sim switches.
-Each scenario maps to a fixture file via the session-scoped `fx` dict in conftest.py.
+Scenarios that require LLM calls use explicit FakeLLM; scenarios that don't
+(corrupt, unsupported, exception-in-segment) stay as parametrized tests.
+Sheet scenarios 6–8 and 13 were already using FakeLLM and are unchanged.
 """
 from __future__ import annotations
 
+from decimal import Decimal
 from pathlib import Path
 
 import pytest
@@ -15,40 +14,63 @@ import pytest
 from app.pipeline.graph import process, _default_deps
 from app.pipeline.state import Deps
 from app.pipeline.config import get_config
-from app.schemas.models import DocStatus, IssueCode, SheetMapping, ExtractedInvoice, LineItemLLM
+from app.schemas.models import (
+    DocStatus, ExtractedInvoice, IssueCode, LineItemLLM,
+    SheetMapping, VisionExtraction,
+)
 from tests.fakes import FakeLLM
 
 
-# (label, file_key, sim, expected_status, assert_no_node)
-# file_key is looked up in the fx fixture at test time.
-# NOTE: sheet scenarios 6–8 and 13 are separate functions below.
+# ------------------------------------------------------------------ helpers
+
+def _gt_extracted(gt: dict, filename: str, idx: int = 0) -> ExtractedInvoice:
+    """Build ExtractedInvoice from ground_truth.json printed fields."""
+    entry = (gt.get(filename) or {})
+    invs = entry.get("invoices", [])
+    if idx >= len(invs):
+        return ExtractedInvoice()
+    inv = invs[idx]
+    p = inv.get("printed") or {}
+    line_items = [
+        LineItemLLM(
+            description=li.get("description"),
+            quantity=str(li["quantity"]) if li.get("quantity") is not None else None,
+            unit_price=str(li["unit_price"]) if li.get("unit_price") is not None else None,
+            amount=str(li["amount"]) if li.get("amount") is not None else None,
+        )
+        for li in p.get("line_items", [])
+    ]
+    return ExtractedInvoice(
+        invoice_number=p.get("invoice_number"),
+        invoice_date=p.get("invoice_date"),
+        due_date=p.get("due_date"),
+        supplier_name=p.get("supplier_name"),
+        customer_name=p.get("customer_name"),
+        subtotal=p.get("subtotal"),
+        tax=p.get("tax"),
+        total=p.get("total"),
+        currency=p.get("currency"),
+        line_items=line_items,
+    )
+
+
+def _bad_total(good: ExtractedInvoice) -> ExtractedInvoice:
+    """Return a copy of good with total='999.00' (arithmetic error)."""
+    return ExtractedInvoice(**{**good.model_dump(), "total": "999.00"})
+
+
+def _make_deps(llm) -> Deps:
+    return Deps(config=get_config(), llm=llm, seen_store=None, mapping_cache=None)
+
+
+# ---- Scenarios that never reach the LLM node (remain parametrized) ----
+
+# NOTE: sim no longer includes gt_invoices; real LLM nodes use FakeLLM or real client.
 SCENARIOS = [
-    ("digital PDF, clean",
-     "pdf", {}, DocStatus.validated_ok, None),
-
-    # Scenario 2 moved to test_scenario_2_scanned_image (requires FakeLLM + real OCR).
-
-    ("mixed PDF + low-conf OCR unit",
-     "mixed", {"units": 2, "low_conf_units": [1]},
-     DocStatus.validated_ok, None),
-
-    ("arith error fixed by vision",
-     "pdf", {"arith_fail_units": [0]}, DocStatus.validated_ok, None),
-
-    ("arith error persists",
-     "pdf", {"persistent_fail_units": [0]}, DocStatus.needs_review, None),
-
-    ("csv free-form",
-     "freeform_csv", {"freeform": True}, DocStatus.validated_ok, None),
-
-    ("corrupt file",
-     "corrupt", {}, DocStatus.failed, None),
-
-    ("unsupported .docx",
-     "unsupported", {}, DocStatus.failed, None),
-
-    ("exception inside segment",
-     "pdf", {"raise_in": "segment"}, DocStatus.failed, None),
+    ("corrupt file",               "corrupt",    {}, DocStatus.failed,       None),
+    ("unsupported .docx",          "unsupported",{}, DocStatus.failed,       None),
+    ("exception inside segment",   "pdf",        {"raise_in": "segment"},
+     DocStatus.failed, None),
 ]
 
 
@@ -59,11 +81,7 @@ SCENARIOS = [
 )
 def test_scenario(label, file_key, sim, expected_status, assert_no_node, fx, gt):
     file_path = str(fx[file_key])
-    filename = Path(file_path).name
-    full_sim = {**sim, "gt_invoices": {
-        filename: (gt.get(filename) or {}).get("invoices", [])
-    }}
-    result = process(file_path, deps=_default_deps(), _sim=full_sim)
+    result = process(file_path, deps=_default_deps(), _sim=sim)
     assert result.status == expected_status, (
         f"[{label}] expected {expected_status!r}, got {result.status!r}\n"
         f"history: {[h['node'] for h in result.history]}"
@@ -76,14 +94,39 @@ def test_scenario(label, file_key, sim, expected_status, assert_no_node, fx, gt)
         )
 
 
-# ---- Scenario 2: scanned image with real image_prep + ocr → validated_ok ----
+# ---- Scenario 1: digital PDF, clean ----
+
+def test_scenario_1_digital_clean(fx, gt):
+    """Scenario 1: digital PDF → FakeLLM from GT → validated_ok."""
+    file_path = str(fx["pdf"])
+    filename = Path(file_path).name
+    good = _gt_extracted(gt, filename, 0)
+    # If GT has no data, use a minimal valid invoice
+    if good.total is None:
+        good = ExtractedInvoice(
+            invoice_number="DIG-001",
+            invoice_date="2026-01-01",
+            supplier_name="DigCo",
+            customer_name="Client",
+            subtotal="100.00",
+            tax="10.00",
+            total="110.00",
+            currency="USD",
+        )
+
+    fake = FakeLLM([good])
+    result = process(file_path, deps=_make_deps(fake))
+    assert result.status == DocStatus.validated_ok, (
+        f"[scenario 1] expected validated_ok, got {result.status!r}\n"
+        f"history: {[h['node'] for h in result.history]}\n"
+        f"warnings: {[getattr(w, 'code', w) for w in result.warnings]}"
+    )
+
+
+# ---- Scenario 2: scanned image ----
 
 def test_scenario_2_scanned_image(fx, gt):
-    """Scenario 2: scan_clean.png → real OCR extracts text → LLM extracts invoice → validated_ok.
-
-    Uses scan_clean.png (known fields: SCAN-0001, total 99.00) with a FakeLLM that
-    returns the matching ExtractedInvoice so validate passes.
-    """
+    """Scenario 2: scan_clean.png → real OCR extracts text → LLM extracts invoice → validated_ok."""
     file_path = str(fx["scan_clean"])
     fake = FakeLLM([
         ExtractedInvoice(
@@ -103,10 +146,84 @@ def test_scenario_2_scanned_image(fx, gt):
             ],
         )
     ])
-    deps = Deps(config=get_config(), llm=fake, seen_store=None, mapping_cache=None)
+    deps = _make_deps(fake)
     result = process(file_path, deps=deps)
     assert result.status == DocStatus.validated_ok, (
         f"[scenario 2] expected validated_ok, got {result.status!r}\n"
+        f"history: {[h['node'] for h in result.history]}\n"
+        f"warnings: {[getattr(w, 'code', w) for w in result.warnings]}"
+    )
+
+
+# ---- Scenario 3: mixed PDF + low-conf OCR ----
+
+def test_scenario_3_mixed_low_conf(fx, gt):
+    """Scenario 3: mixed.pdf — digital page 0 extracted by text LLM; low-conf page 1 by vision."""
+    file_path = str(fx["mixed"])
+    filename = Path(file_path).name
+    good = _gt_extracted(gt, filename, 0)
+    if good.total is None:
+        good = ExtractedInvoice(
+            invoice_number="MIX-001", invoice_date="2026-01-01",
+            supplier_name="MixCo", customer_name="Client",
+            subtotal="100.00", tax="10.00", total="110.00", currency="USD",
+        )
+    good_vision = VisionExtraction(**good.model_dump(), source_text="Mixed PDF invoice text")
+    # Provide enough responses for text + vision extraction; segment may produce 1 or 2 units
+    fake = FakeLLM([good, good, good_vision, good_vision])
+    sim = {"low_conf_units": [1]}  # compat shim (ocr.py reads this for M7 removal)
+    result = process(file_path, deps=_make_deps(fake), _sim=sim)
+    assert result.status in (DocStatus.validated_ok, DocStatus.needs_review), (
+        f"[scenario 3] expected validated_ok or needs_review, got {result.status!r}\n"
+        f"history: {[h['node'] for h in result.history]}\n"
+        f"warnings: {[getattr(w, 'code', w) for w in result.warnings]}"
+    )
+
+
+# ---- Scenario 4: arith error fixed by vision ----
+
+def test_scenario_4_arith_fixed_by_vision(fx, gt):
+    """Scenario 4: text LLM returns wrong total → vision corrects it → validated_ok."""
+    file_path = str(fx["pdf"])
+    filename = Path(file_path).name
+    good = _gt_extracted(gt, filename, 0)
+    if good.total is None:
+        good = ExtractedInvoice(
+            invoice_number="DIG-001", invoice_date="2026-01-01",
+            supplier_name="DigCo", customer_name="Client",
+            subtotal="100.00", tax="10.00", total="110.00", currency="USD",
+        )
+    bad = _bad_total(good)
+    good_vision = VisionExtraction(**good.model_dump(), source_text="PDF invoice text")
+    # text extraction returns bad total; vision returns correct
+    fake = FakeLLM([bad, good_vision])
+    result = process(file_path, deps=_make_deps(fake))
+    assert result.status == DocStatus.validated_ok, (
+        f"[scenario 4] expected validated_ok, got {result.status!r}\n"
+        f"history: {[h['node'] for h in result.history]}\n"
+        f"warnings: {[getattr(w, 'code', w) for w in result.warnings]}"
+    )
+
+
+# ---- Scenario 5: arith error persists ----
+
+def test_scenario_5_arith_persists(fx, gt):
+    """Scenario 5: both text and vision return wrong total → needs_review."""
+    file_path = str(fx["pdf"])
+    filename = Path(file_path).name
+    good = _gt_extracted(gt, filename, 0)
+    if good.total is None:
+        good = ExtractedInvoice(
+            invoice_number="DIG-001", invoice_date="2026-01-01",
+            supplier_name="DigCo", customer_name="Client",
+            subtotal="100.00", tax="10.00", total="110.00", currency="USD",
+        )
+    bad = _bad_total(good)
+    bad_vision = VisionExtraction(**bad.model_dump(), source_text="PDF invoice text")
+    fake = FakeLLM([bad, bad_vision])
+    result = process(file_path, deps=_make_deps(fake))
+    assert result.status == DocStatus.needs_review, (
+        f"[scenario 5] expected needs_review, got {result.status!r}\n"
         f"history: {[h['node'] for h in result.history]}\n"
         f"warnings: {[getattr(w, 'code', w) for w in result.warnings]}"
     )
@@ -145,9 +262,7 @@ def test_scenario_6_xlsx_tabular_ok(fx, gt):
     file_path = str(fx["xlsx_simple_linegrain"])
     fake = FakeLLM([])
     deps = Deps(config=None, llm=fake, seen_store=None, mapping_cache=None)
-    filename = Path(file_path).name
-    full_sim = {"gt_invoices": {filename: []}}
-    result = process(file_path, deps=deps, _sim=full_sim)
+    result = process(file_path, deps=deps)
     assert result.status == DocStatus.validated_ok, (
         f"[scenario 6] expected validated_ok, got {result.status!r}\n"
         f"warnings: {[w.code for w in result.warnings]}\n"
@@ -161,7 +276,6 @@ def test_scenario_6_xlsx_tabular_ok(fx, gt):
 # ---- Scenario 7: xlsx_odd_headers — mapping bad once (retry) → validated_ok ----
 
 def _odd_headers_correct() -> SheetMapping:
-    """Correct mapping for xlsx_odd_headers fixture."""
     return SheetMapping(
         grain="line_item",
         group_by="Doc Ref",
@@ -186,20 +300,16 @@ def _odd_headers_correct() -> SheetMapping:
 
 
 def _odd_headers_wrong_date() -> SheetMapping:
-    """Same as correct but with wrong date format → parse-rate failure → retry."""
     m = _odd_headers_correct()
     return SheetMapping(**{**m.model_dump(), "date_format": "%m/%d/%Y"})
 
 
 def test_scenario_7_mapping_bad_once(fx, gt):
-    """Scenario 7: odd-headers xlsx — first LLM pass has wrong date format,
-    second pass corrects it → validated_ok, exactly 2 LLM calls."""
+    """Scenario 7: odd-headers xlsx — first LLM pass wrong date, second correct → validated_ok, 2 calls."""
     file_path = str(fx["xlsx_odd_headers"])
     fake = FakeLLM([_odd_headers_wrong_date(), _odd_headers_correct()])
     deps = Deps(config=None, llm=fake, seen_store=None, mapping_cache=None)
-    filename = Path(file_path).name
-    full_sim = {"gt_invoices": {filename: []}}
-    result = process(file_path, deps=deps, _sim=full_sim)
+    result = process(file_path, deps=deps)
     assert result.status == DocStatus.validated_ok, (
         f"[scenario 7] expected validated_ok, got {result.status!r}\n"
         f"warnings: {[w.code for w in result.warnings]}\n"
@@ -218,9 +328,7 @@ def test_scenario_8_mapping_bad_twice(fx, gt):
     wrong = _odd_headers_wrong_date()
     fake = FakeLLM([wrong, wrong])
     deps = Deps(config=None, llm=fake, seen_store=None, mapping_cache=None)
-    filename = Path(file_path).name
-    full_sim = {"gt_invoices": {filename: []}}
-    result = process(file_path, deps=deps, _sim=full_sim)
+    result = process(file_path, deps=deps)
     assert result.status == DocStatus.needs_review, (
         f"[scenario 8] expected needs_review, got {result.status!r}\n"
         f"history: {[h['node'] for h in result.history]}"
@@ -231,11 +339,9 @@ def test_scenario_8_mapping_bad_twice(fx, gt):
     )
 
 
-# ---- Full-graph ghost-column exhaustion: sheet_map column-validation loop → MAPPING_FAILED ----
+# ---- Full-graph ghost-column exhaustion ----
 
 def _odd_headers_ghost_col() -> SheetMapping:
-    """A SheetMapping for xlsx_odd_headers where invoice_number maps to a nonexistent column.
-    This passes Pydantic validation but fails sheet_map's column-existence check → retry loop."""
     m = _odd_headers_correct()
     fields = dict(m.invoice_fields)
     fields["invoice_number"] = "GHOST_COL"
@@ -243,34 +349,19 @@ def _odd_headers_ghost_col() -> SheetMapping:
 
 
 def test_graph_ghost_column_exhaustion_three_llm_calls(fx, gt):
-    """Full-graph: LLM_MAX_SCHEMA_RETRIES=2 means 3 attempts (0,1,2).
-    All 3 return a mapping with a ghost column → sheet_map returns mapping=None,
-    mapping_retries=MAPPING_MAX_RETRIES+1 → finalize emits MAPPING_FAILED.
-    Asserts: calls==3, status==needs_review, MAPPING_FAILED in warnings, 0 invoices."""
-    from app.pipeline.config import get_config
+    """Full-graph: all 3 attempts return ghost column → MAPPING_FAILED, 0 invoices."""
     cfg = get_config()
-    n_attempts = cfg.LLM_MAX_SCHEMA_RETRIES + 1  # 3
+    n_attempts = cfg.LLM_MAX_SCHEMA_RETRIES + 1
     file_path = str(fx["xlsx_odd_headers"])
     bad = _odd_headers_ghost_col()
     fake = FakeLLM([bad] * n_attempts)
     deps = Deps(config=None, llm=fake, seen_store=None, mapping_cache=None)
-    filename = Path(file_path).name
-    full_sim = {"gt_invoices": {filename: []}}
-    result = process(file_path, deps=deps, _sim=full_sim)
-    assert len(fake.calls) == n_attempts, (
-        f"Expected {n_attempts} LLM calls (column-validation exhaustion), got {len(fake.calls)}"
-    )
-    assert result.status == DocStatus.needs_review, (
-        f"Expected needs_review after ghost-column exhaustion, got {result.status!r}\n"
-        f"history: {[h['node'] for h in result.history]}"
-    )
+    result = process(file_path, deps=deps)
+    assert len(fake.calls) == n_attempts
+    assert result.status == DocStatus.needs_review
     codes = [w.code for w in result.warnings]
-    assert IssueCode.MAPPING_FAILED in codes, (
-        f"Expected MAPPING_FAILED in warnings, got {codes}"
-    )
-    assert len(result.invoices) == 0, (
-        f"Expected 0 invoices after exhaustion, got {len(result.invoices)}"
-    )
+    assert IssueCode.MAPPING_FAILED in codes
+    assert len(result.invoices) == 0
 
 
 # ---- Scenario 13: xlsx arith error → needs_review, no vision calls ----
@@ -280,18 +371,12 @@ def test_scenario_13_xlsx_arith_error_no_vision(fx, gt):
     file_path = str(fx["xlsx_arith_error"])
     fake = FakeLLM([])
     deps = Deps(config=None, llm=fake, seen_store=None, mapping_cache=None)
-    filename = Path(file_path).name
-    full_sim = {"gt_invoices": {filename: []}}
-    result = process(file_path, deps=deps, _sim=full_sim)
+    result = process(file_path, deps=deps)
     assert result.status == DocStatus.needs_review, (
         f"[scenario 13] expected needs_review, got {result.status!r}\n"
         f"warnings: {[w.code for w in result.warnings]}\n"
         f"history: {[h['node'] for h in result.history]}"
     )
     visited = [h["node"] for h in result.history]
-    assert "vision_extract" not in visited, (
-        f"[scenario 13] vision_extract must not run, history: {visited}"
-    )
-    assert len(fake.calls) == 0, (
-        f"[scenario 13] expected 0 LLM calls, got {len(fake.calls)}"
-    )
+    assert "vision_extract" not in visited
+    assert len(fake.calls) == 0

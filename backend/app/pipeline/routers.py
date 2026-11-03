@@ -41,6 +41,8 @@ def route_after_transform(s: State, cfg: Config) -> str:
 
 def route_after_validate(s: State) -> str:
     # Fix 1: sheets must never go to vision_extract (no page images available).
+    if s.get("error"):
+        return "finalize"
     if s.get("file_type") == "sheet":
         return "finalize"
     if s.get("vision_queue") and not s.get("escalated"):

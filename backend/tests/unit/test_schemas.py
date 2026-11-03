@@ -168,7 +168,16 @@ def test_json_roundtrip_line_item_money():
 
 def test_stream_process_yields_nodes_in_order(fx):
     """stream_process yields (node_name, state_update) for a clean digital PDF."""
-    pairs = list(stream_process(str(fx["pdf"]), _sim={}))
+    from app.schemas.models import ExtractedInvoice
+    from app.pipeline.state import Deps
+    from app.pipeline.config import get_config
+    from tests.fakes import FakeLLM
+    fake = FakeLLM([ExtractedInvoice(invoice_number="INV-001", total="110.00",
+                                      subtotal="100.00", tax="10.00", currency="USD")])
+    deps = Deps(config=get_config(), llm=fake, seen_store=None, mapping_cache=None)
+    raw_pairs = list(stream_process(str(fx["pdf"]), deps=deps, _sim={}))
+    # Filter out None updates (LangGraph emits None for nodes that return {})
+    pairs = [(name, upd if upd is not None else {}) for name, upd in raw_pairs]
     node_names = [name for name, _ in pairs]
     # all yielded items must have a string node name and dict update
     for name, update in pairs:

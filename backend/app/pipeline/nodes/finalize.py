@@ -77,6 +77,15 @@ def finalize(s: State) -> dict:
     else:
         doc_status = _doc_status(invoice_statuses)
 
+    # Compute timings from history
+    history = s.get("history", [])
+    by_node: dict[str, float] = {}
+    for h in history:
+        name = h.get("node", "unknown")
+        by_node[name] = round(by_node.get(name, 0.0) + h.get("seconds", 0.0), 5)
+    total_secs = round(sum(by_node.values()), 5)
+    timings = {"total": total_secs, "by_node": by_node}
+
     result = {
         "status": doc_status,
         "error_code": s.get("error_code"),
@@ -90,10 +99,10 @@ def finalize(s: State) -> dict:
         "page_text": s.get("page_text", {}),
         "page_source": s.get("page_source", {}),
         "ocr_conf": s.get("ocr_conf", {}),
-        "timings": {},
-        "history": s.get("history", []),
+        "timings": timings,
+        "history": history,
         "llm_usage": s.get("llm_usage", {}),
-        "pipeline_version": "0.0.1-m0",
+        "pipeline_version": "0.1.0-m6",
     }
 
     return {"status": doc_status, "result": result}

@@ -116,6 +116,8 @@ def node(name: str, skip_on_error: bool = True):
                 out = fn(state) or {}
                 meta = out.pop("_meta", {})
             except Exception as exc:  # noqa: BLE001
+                if getattr(exc, "_propagate", False):
+                    raise
                 out = {
                     "error": f"{name}: {exc}",
                     "error_code": ErrorCode.INTERNAL_ERROR.value,
