@@ -70,11 +70,11 @@ def main(argv: list[str] | None = None) -> int:
         from dotenv import load_dotenv
         load_dotenv()
         from app.pipeline.config import get_config
-        from app.pipeline.llm.client import LLMClient
+        from app.pipeline.llm.client import build_llm_client
         from app.pipeline.state import Deps
         cfg = get_config()
         try:
-            llm = LLMClient(cfg)
+            llm = build_llm_client(cfg)
         except Exception as exc:
             print(f"ERROR: could not create LLMClient: {exc}", file=sys.stderr)
             return 1
