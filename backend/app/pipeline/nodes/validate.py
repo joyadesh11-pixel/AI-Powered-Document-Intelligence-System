@@ -38,10 +38,7 @@ def _run_validate(s: State, *, seen_store: Any) -> dict:
     new_vision_queue: list[int] = list(vision_queue)
 
     for inv_dict in invoices_in:
-        invoice = (
-            inv_dict if isinstance(inv_dict, Invoice)
-            else Invoice.model_validate(inv_dict)
-        )
+        invoice = Invoice.model_validate(inv_dict)
 
         source_text = " ".join(page_text.get(p, "") for p in invoice.source_pages)
 
@@ -74,7 +71,7 @@ def _run_validate(s: State, *, seen_store: Any) -> dict:
         if should_escalate and invoice.unit_id is not None:
             new_vision_queue.append(invoice.unit_id)
 
-        updated = dict(inv_dict) if isinstance(inv_dict, dict) else {}
+        updated = dict(inv_dict)
         updated["status"] = status
         updated["issues"] = [iss.model_dump() for iss in issues]
         new_invoices.append(updated)

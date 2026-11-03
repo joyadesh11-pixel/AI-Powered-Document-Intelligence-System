@@ -83,7 +83,6 @@ class IssueCode(str, Enum):
     TRUNCATED_IMAGE = "TRUNCATED_IMAGE"
     EXT_MISMATCH = "EXT_MISMATCH"
     SEGMENT_FALLBACK = "SEGMENT_FALLBACK"
-    ARITH_MISMATCH = "ARITH_MISMATCH"  # used in dry-run stubs
 
 
 # --------------------------------------------------------- LLM-facing models

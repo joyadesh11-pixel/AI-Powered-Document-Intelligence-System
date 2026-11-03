@@ -175,7 +175,7 @@ def test_stream_process_yields_nodes_in_order(fx):
     fake = FakeLLM([ExtractedInvoice(invoice_number="INV-001", total="110.00",
                                       subtotal="100.00", tax="10.00", currency="USD")])
     deps = Deps(config=get_config(), llm=fake, seen_store=None, mapping_cache=None)
-    raw_pairs = list(stream_process(str(fx["pdf"]), deps=deps, _sim={}))
+    raw_pairs = list(stream_process(str(fx["pdf"]), deps=deps))
     # Filter out None updates (LangGraph emits None for nodes that return {})
     pairs = [(name, upd if upd is not None else {}) for name, upd in raw_pairs]
     node_names = [name for name, _ in pairs]

@@ -18,10 +18,11 @@ _GROUND_FUZZY_MIN = 80
 
 
 def check_grounding(invoice: Any, source_text: str, tier: str) -> list[Issue]:
-    """Return NOT_GROUNDED issues; skipped for vision/sheet tiers or empty source."""
+    """Return NOT_GROUNDED issues; skipped for vision/sheet tiers.
+
+    Empty OCR source text does NOT skip grounding — empty pages surface NOT_GROUNDED.
+    """
     if tier in ("vision", "sheet"):
-        return []
-    if not source_text.strip():
         return []
 
     severity = Severity.error if tier == "parser" else Severity.warning

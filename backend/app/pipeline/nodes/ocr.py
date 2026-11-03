@@ -3,9 +3,6 @@
 Writes: page_text, page_source, ocr_conf, low_conf_pages (extended), warnings (merged).
 Uses a thread-local RapidOCR engine so each worker thread gets its own ONNX session.
 Merges into existing page_text / page_source / ocr_conf (never replaces digital pages).
-
-M7 note: sim.low_conf_units compat line forces specific pages into low_conf_pages so
-scenario 3 integration test keeps passing; remove when sim switches are removed in M7.
 """
 from __future__ import annotations
 
@@ -217,11 +214,6 @@ def ocr(s: State) -> dict:
                     new_lc.append(p)
                     if not both_failed:
                         new_warnings.append(_low_ocr_conf_issue(p, conf))
-
-    # Sim compat: force sim.low_conf_units into low_conf (removed in M7)
-    for p in s.get("sim", {}).get("low_conf_units", []):
-        if p not in existing_lc and p not in new_lc:
-            new_lc.append(p)
 
     all_lc = sorted(existing_lc | set(new_lc))
     merged_warnings = list(s.get("warnings") or []) + new_warnings

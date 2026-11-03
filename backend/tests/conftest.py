@@ -72,6 +72,25 @@ def fx(fixture_dir: Path) -> dict[str, Path]:
         "scan_3frame":   fixture_dir / "scan_3frame.tiff",
         "blank":         fixture_dir / "blank.png",
         "scanned_pdf":   fixture_dir / "scanned.pdf",
+        # M7 scanned PDF fixtures
+        "scanned_clean":    fixture_dir / "scanned_clean.pdf",
+        "scanned_mild":     fixture_dir / "scanned_mild.pdf",
+        "scanned_moderate": fixture_dir / "scanned_moderate.pdf",
+        "scanned_severe":   fixture_dir / "scanned_severe.pdf",
+        "scanned_rotated":  fixture_dir / "scanned_rotated.pdf",
+        "scanned_3page":    fixture_dir / "scanned_3page.pdf",
+        # M7 multi-invoice PDF fixtures
+        "multi_inv_001": fixture_dir / "multi_inv_001.pdf",
+        "multi_inv_002": fixture_dir / "multi_inv_002.pdf",
+        "multi_inv_003": fixture_dir / "multi_inv_003.pdf",
+        # M7 injected-error fixtures
+        "wrong_total_001":   fixture_dir / "wrong_total_001.pdf",
+        "wrong_total_002":   fixture_dir / "wrong_total_002.pdf",
+        "wrong_total_003":   fixture_dir / "wrong_total_003.pdf",
+        "dup_invnum_001":    fixture_dir / "dup_invnum_001.pdf",
+        "dup_invnum_002":    fixture_dir / "dup_invnum_002.pdf",
+        "missing_invnum_001": fixture_dir / "missing_invnum_001.pdf",
+        "missing_invnum_002": fixture_dir / "missing_invnum_002.pdf",
     }
 
 

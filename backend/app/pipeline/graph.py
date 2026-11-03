@@ -3,10 +3,9 @@
 Fix 6: dependency injection via build_graph(deps).
   - deps are closed over in router lambdas so they are NOT stored in State
     (State must stay JSON-serialisable).
-  - process(file_path, *, deps, _sim) -> PipelineResult
-  - stream_process(file_path, *, deps, _sim) -> Iterator[(node_name, state_update)]
-  - _sim is a test-only kwarg (underscore prefix); removed with sim switches in M7.
-  - _default_deps() lets dry-run tests work with no environment variables.
+  - process(file_path, *, deps) -> PipelineResult
+  - stream_process(file_path, *, deps) -> Iterator[(node_name, state_update)]
+  - _default_deps() lets tests work with no environment variables.
 M5: image_prep is now a factory (make_image_prep); process() and stream_process() create
     a TemporaryDirectory and inject its path into deps["image_temp_dir"] so image_prep can
     write page PNGs into it.  The directory is cleaned up when the context manager exits.
@@ -115,8 +114,8 @@ def build_graph(deps: Deps | None = None):
     return g.compile()
 
 
-def _initial_state(file_path: str, _sim: dict | None) -> dict:
-    return {"file_path": file_path, "sim": _sim or {}, "history": []}
+def _initial_state(file_path: str) -> dict:
+    return {"file_path": file_path, "history": []}
 
 
 def _build_result(final: State) -> PipelineResult:
@@ -152,7 +151,6 @@ def process(
     file_path: str,
     *,
     deps: Deps | None = None,
-    _sim: dict | None = None,   # test-only; removed in M7
 ) -> PipelineResult:
     """Run the pipeline synchronously and return a PipelineResult."""
     d = deps or _default_deps()
@@ -160,7 +158,7 @@ def process(
         d_with_tmp: Deps = {**d, "image_temp_dir": tmp}  # type: ignore[misc]
         graph = build_graph(d_with_tmp)
         try:
-            final: State = graph.invoke(_initial_state(file_path, _sim))
+            final: State = graph.invoke(_initial_state(file_path))
         except LLMConfigError as exc:
             return PipelineResult.model_validate({
                 "status": "failed",
@@ -178,13 +176,12 @@ def stream_process(
     file_path: str,
     *,
     deps: Deps | None = None,
-    _sim: dict | None = None,
 ) -> Iterator[tuple[str, dict]]:
     """Stream (node_name, state_update) pairs as the graph runs."""
     d = deps or _default_deps()
     with tempfile.TemporaryDirectory(prefix="dociq_imgp_") as tmp:
         d_with_tmp: Deps = {**d, "image_temp_dir": tmp}  # type: ignore[misc]
         graph = build_graph(d_with_tmp)
-        for update in graph.stream(_initial_state(file_path, _sim), stream_mode="updates"):
+        for update in graph.stream(_initial_state(file_path), stream_mode="updates"):
             for node_name, state_update in update.items():
                 yield node_name, state_update

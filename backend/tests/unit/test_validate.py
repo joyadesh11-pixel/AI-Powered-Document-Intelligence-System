@@ -80,7 +80,6 @@ def run_validate(
         "file_hash": file_hash,
         "escalated": escalated,
         "vision_queue": vision_queue or [],
-        "sim": {},
         "history": [],
     }
     deps = {"seen_store": seen_store} if seen_store is not None else None
@@ -602,6 +601,30 @@ def test_t19_grounding_passes_when_source_matches():
     assert IssueCode.NOT_GROUNDED.value not in codes, (
         f"Grounding should pass when source text matches. Got: {codes}"
     )
+
+
+def test_t19_grounding_empty_source_fires():
+    """Empty OCR source_text must surface NOT_GROUNDED (M7: removed empty-source guard)."""
+    inv = make_invoice(tier=Tier.parser)
+    result = run_validate([inv], page_text={0: ""})
+    codes = issue_codes(result)
+    assert IssueCode.NOT_GROUNDED.value in codes, (
+        "Empty OCR page must surface NOT_GROUNDED (grounding must not skip empty source)"
+    )
+
+
+# ---------------------------------------------------------------------------
+# _extract_amounts: M7 requirement
+# ---------------------------------------------------------------------------
+
+def test_extract_amounts_mixed():
+    """_extract_amounts must parse comma-thousands, plain integers, and currency context."""
+    from app.pipeline.validation.grounding import _extract_amounts
+    from decimal import Decimal
+    result = _extract_amounts("Total 1,234.56 EUR 99 Qty 10")
+    assert Decimal("1234.56") in result, f"Expected 1234.56 in {result}"
+    assert Decimal("99.00") in result, f"Expected 99.00 in {result}"
+    assert Decimal("10.00") in result, f"Expected 10.00 in {result}"
 
 
 # ---------------------------------------------------------------------------

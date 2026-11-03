@@ -1708,6 +1708,402 @@ def _make_blank_scan_png(path: Path) -> None:
     Image.new("RGB", (800, 1100), color=(255, 255, 255)).save(str(path))
 
 
+# ------------------------------------------------------------------ multi-invoice PDFs
+
+def _make_multi_invoice_page(
+    doc,
+    inv_number: str,
+    inv_date: str,
+    supplier: str,
+    customer: str,
+    currency: str,
+    line_items: list[dict],
+    tax_rate: int,
+    page_num: int,
+    total_pages: int,
+    amount_fmt: str = "us",
+) -> dict | None:
+    """Add one page of a multi-page invoice to an open fitz.Document.
+
+    Returns the ground-truth invoice dict on page 1 (when page_num==1), else None.
+    """
+    def fmt(v):
+        s = f"{v:.2f}"
+        if amount_fmt == "eu":
+            return _fmt_amount_eu(s)
+        elif amount_fmt == "plain":
+            return _fmt_amount_plain(s)
+        return _fmt_amount_us(s)
+
+    subtotal = sum(it["quantity"] * it["unit_price"] for it in line_items)
+    tax = subtotal * tax_rate / 100
+    total = subtotal + tax
+
+    page = doc.new_page(width=595, height=842)
+    y = 50
+
+    # Page header with "Page X of Y"
+    page.insert_text(fitz.Point(50, y), f"Page {page_num} of {total_pages}", fontsize=9)
+    y += 14
+
+    if page_num == 1:
+        page.insert_text(fitz.Point(50, y), "INVOICE", fontsize=16)
+        y += 22
+        page.insert_text(fitz.Point(50, y), f"Invoice No: {inv_number}", fontsize=11)
+        y += 16
+        page.insert_text(fitz.Point(50, y), f"Invoice Date: {inv_date}", fontsize=11)
+        y += 16
+        page.insert_text(fitz.Point(50, y), f"Supplier: {supplier}", fontsize=11)
+        y += 16
+        page.insert_text(fitz.Point(50, y), f"Customer: {customer}", fontsize=11)
+        y += 16
+        page.insert_text(fitz.Point(50, y), f"Currency: {currency}", fontsize=11)
+        y += 20
+    else:
+        # Continuation page: re-print invoice number and page header only
+        page.insert_text(fitz.Point(50, y), f"Invoice No: {inv_number} (continued)", fontsize=11)
+        y += 20
+
+    # Line items for this page (split evenly across pages)
+    items_per_page = max(1, len(line_items) // total_pages)
+    start = (page_num - 1) * items_per_page
+    end = len(line_items) if page_num == total_pages else start + items_per_page
+    page_items = line_items[start:end]
+
+    for it in page_items:
+        amt = it["quantity"] * it["unit_price"]
+        page.insert_text(
+            fitz.Point(50, y),
+            f"  {it['description']}: {it['quantity']} x {fmt(it['unit_price'])} = {fmt(amt)}",
+            fontsize=9,
+        )
+        y += 12
+
+    # Totals only on last page
+    if page_num == total_pages:
+        y += 8
+        page.insert_text(fitz.Point(50, y), f"Subtotal: {fmt(subtotal)}", fontsize=11)
+        y += 14
+        page.insert_text(fitz.Point(50, y), f"Tax ({tax_rate}%): {fmt(tax)}", fontsize=11)
+        y += 14
+        page.insert_text(fitz.Point(50, y), f"Total Due: {fmt(total)}", fontsize=11)
+
+    if page_num == 1:
+        def _dstr(v):
+            return f"{v:.2f}"
+        return {
+            "invoice_number": inv_number,
+            "invoice_date": inv_date,
+            "supplier_name": supplier,
+            "customer_name": customer,
+            "subtotal": _dstr(subtotal),
+            "tax": _dstr(tax),
+            "total": _dstr(total),
+            "currency": currency,
+            "line_items": [
+                {
+                    "description": it["description"],
+                    "quantity": str(it["quantity"]),
+                    "unit_price": _dstr(it["unit_price"]),
+                    "amount": _dstr(it["quantity"] * it["unit_price"]),
+                }
+                for it in line_items
+            ],
+            "printed": {
+                "invoice_number": inv_number,
+                "invoice_date": inv_date,
+                "supplier_name": supplier,
+                "customer_name": customer,
+                "subtotal": fmt(subtotal),
+                "tax": fmt(tax),
+                "total": fmt(total),
+                "currency": currency,
+            },
+        }
+    return None
+
+
+def _make_multi_invoice_pdf(
+    path: Path,
+    invoices: list[dict],
+    rng,
+    fake_gen,
+) -> tuple[list[dict], list[dict]]:
+    """Create a PDF with multiple invoices.
+
+    invoices: list of dicts with keys: inv_number, inv_date, supplier, customer,
+              currency, line_items, tax_rate, n_pages, amount_fmt.
+    Returns: (gt_invoices list, page_range_records list).
+    """
+    doc = fitz.open()
+    gt_invoices = []
+    page_ranges = []
+    global_page = 0
+
+    for spec in invoices:
+        n_pages = spec.get("n_pages", 1)
+        line_items = spec["line_items"]
+        start_page = global_page
+        inv_gt = None
+        for pg in range(1, n_pages + 1):
+            result = _make_multi_invoice_page(
+                doc,
+                inv_number=spec["inv_number"],
+                inv_date=spec["inv_date"],
+                supplier=spec["supplier"],
+                customer=spec["customer"],
+                currency=spec["currency"],
+                line_items=line_items,
+                tax_rate=spec["tax_rate"],
+                page_num=pg,
+                total_pages=n_pages,
+                amount_fmt=spec.get("amount_fmt", "us"),
+            )
+            if result is not None:
+                inv_gt = result
+            global_page += 1
+        end_page = global_page - 1
+        if inv_gt is not None:
+            inv_gt = {**inv_gt, "pages": list(range(start_page, end_page + 1))}
+            gt_invoices.append(inv_gt)
+        page_ranges.append({"inv_number": spec["inv_number"], "pages": list(range(start_page, end_page + 1))})
+
+    doc.save(str(path))
+    doc.close()
+    return gt_invoices, page_ranges
+
+
+# ------------------------------------------------------------------ injected-error PDFs
+
+def _make_injected_arith_pdf(
+    path: Path,
+    inv_number: str,
+    inv_date: str,
+    supplier: str,
+    customer: str,
+    line_items: list[dict],
+    currency: str,
+    tax_rate: int,
+) -> dict:
+    """PDF where the printed total is off by 1.00 (subtotal+tax+1.00 printed as total).
+
+    The arithmetic error is in the printed text, not silently consistent.
+    """
+    subtotal = sum(it["quantity"] * it["unit_price"] for it in line_items)
+    tax = subtotal * tax_rate / 100
+    correct_total = subtotal + tax
+    wrong_total = correct_total + 1.0  # deliberate off-by-one
+
+    def _dstr(v):
+        return f"{v:.2f}"
+
+    doc = fitz.open()
+    page = doc.new_page(width=595, height=842)
+    y = 50
+    page.insert_text(fitz.Point(50, y), "INVOICE", fontsize=16)
+    y += 22
+    page.insert_text(fitz.Point(50, y), f"Invoice No: {inv_number}", fontsize=11)
+    y += 16
+    page.insert_text(fitz.Point(50, y), f"Invoice Date: {inv_date}", fontsize=11)
+    y += 16
+    page.insert_text(fitz.Point(50, y), f"Supplier: {supplier}", fontsize=11)
+    y += 16
+    page.insert_text(fitz.Point(50, y), f"Customer: {customer}", fontsize=11)
+    y += 16
+    page.insert_text(fitz.Point(50, y), f"Currency: {currency}", fontsize=11)
+    y += 20
+    for it in line_items:
+        amt = it["quantity"] * it["unit_price"]
+        page.insert_text(fitz.Point(50, y),
+                         f"  {it['description']}: {_dstr(amt)}", fontsize=9)
+        y += 12
+    y += 8
+    page.insert_text(fitz.Point(50, y), f"Subtotal: {_fmt_amount_us(_dstr(subtotal))}", fontsize=11)
+    y += 14
+    page.insert_text(fitz.Point(50, y), f"Tax ({tax_rate}%): {_fmt_amount_us(_dstr(tax))}", fontsize=11)
+    y += 14
+    # Print WRONG total
+    page.insert_text(fitz.Point(50, y), f"Total Due: {_fmt_amount_us(_dstr(wrong_total))}", fontsize=11)
+    doc.save(str(path))
+    doc.close()
+
+    return {
+        "invoice_number": inv_number,
+        "invoice_date": inv_date,
+        "supplier_name": supplier,
+        "customer_name": customer,
+        "subtotal": _dstr(subtotal),
+        "tax": _dstr(tax),
+        "total": _dstr(wrong_total),
+        "currency": currency,
+        "line_items": [
+            {
+                "description": it["description"],
+                "quantity": str(it["quantity"]),
+                "unit_price": _dstr(it["unit_price"]),
+                "amount": _dstr(it["quantity"] * it["unit_price"]),
+            }
+            for it in line_items
+        ],
+        "printed": {
+            "invoice_number": inv_number,
+            "invoice_date": inv_date,
+            "supplier_name": supplier,
+            "customer_name": customer,
+            "subtotal": _fmt_amount_us(_dstr(subtotal)),
+            "tax": _fmt_amount_us(_dstr(tax)),
+            "total": _fmt_amount_us(_dstr(wrong_total)),
+            "currency": currency,
+        },
+    }
+
+
+def _make_injected_dup_pdf(
+    path: Path,
+    inv_number: str,
+    inv_date: str,
+    supplier: str,
+    customer: str,
+    total: str,
+    currency: str,
+) -> dict:
+    """PDF with same invoice_number, supplier_name, total as a reference invoice.
+
+    The duplicate key in the validation layer is (invoice_number, supplier_name, total).
+    """
+    doc = fitz.open()
+    page = doc.new_page(width=595, height=842)
+    y = 50
+    page.insert_text(fitz.Point(50, y), "INVOICE", fontsize=16)
+    y += 22
+    page.insert_text(fitz.Point(50, y), f"Invoice No: {inv_number}", fontsize=11)
+    y += 16
+    page.insert_text(fitz.Point(50, y), f"Invoice Date: {inv_date}", fontsize=11)
+    y += 16
+    page.insert_text(fitz.Point(50, y), f"Supplier: {supplier}", fontsize=11)
+    y += 16
+    page.insert_text(fitz.Point(50, y), f"Customer: {customer}", fontsize=11)
+    y += 16
+    page.insert_text(fitz.Point(50, y), f"Currency: {currency}", fontsize=11)
+    y += 20
+    page.insert_text(fitz.Point(50, y), f"Total Due: {_fmt_amount_us(total)}", fontsize=11)
+    doc.save(str(path))
+    doc.close()
+
+    return {
+        "invoice_number": inv_number,
+        "invoice_date": inv_date,
+        "supplier_name": supplier,
+        "customer_name": "Duplicate Customer",
+        "subtotal": None,
+        "tax": None,
+        "total": total,
+        "currency": currency,
+        "line_items": [],
+        "printed": {
+            "invoice_number": inv_number,
+            "invoice_date": inv_date,
+            "supplier_name": supplier,
+            "customer_name": "Duplicate Customer",
+            "total": _fmt_amount_us(total),
+            "currency": currency,
+        },
+    }
+
+
+def _make_injected_missing_invnum_pdf(
+    path: Path,
+    inv_date: str,
+    supplier: str,
+    customer: str,
+    line_items: list[dict],
+    currency: str,
+    tax_rate: int,
+) -> dict:
+    """PDF where invoice_number is intentionally absent from the text."""
+    subtotal = sum(it["quantity"] * it["unit_price"] for it in line_items)
+    tax = subtotal * tax_rate / 100
+    total = subtotal + tax
+
+    def _dstr(v):
+        return f"{v:.2f}"
+
+    doc = fitz.open()
+    page = doc.new_page(width=595, height=842)
+    y = 50
+    page.insert_text(fitz.Point(50, y), "INVOICE", fontsize=16)
+    y += 22
+    # Deliberately omit Invoice No line
+    page.insert_text(fitz.Point(50, y), f"Invoice Date: {inv_date}", fontsize=11)
+    y += 16
+    page.insert_text(fitz.Point(50, y), f"Supplier: {supplier}", fontsize=11)
+    y += 16
+    page.insert_text(fitz.Point(50, y), f"Customer: {customer}", fontsize=11)
+    y += 16
+    page.insert_text(fitz.Point(50, y), f"Currency: {currency}", fontsize=11)
+    y += 20
+    for it in line_items:
+        amt = it["quantity"] * it["unit_price"]
+        page.insert_text(fitz.Point(50, y),
+                         f"  {it['description']}: {_dstr(amt)}", fontsize=9)
+        y += 12
+    y += 8
+    page.insert_text(fitz.Point(50, y), f"Subtotal: {_fmt_amount_us(_dstr(subtotal))}", fontsize=11)
+    y += 14
+    page.insert_text(fitz.Point(50, y), f"Tax ({tax_rate}%): {_fmt_amount_us(_dstr(tax))}", fontsize=11)
+    y += 14
+    page.insert_text(fitz.Point(50, y), f"Total Due: {_fmt_amount_us(_dstr(total))}", fontsize=11)
+    doc.save(str(path))
+    doc.close()
+
+    return {
+        "invoice_number": None,
+        "invoice_date": inv_date,
+        "supplier_name": supplier,
+        "customer_name": customer,
+        "subtotal": _dstr(subtotal),
+        "tax": _dstr(tax),
+        "total": _dstr(total),
+        "currency": currency,
+        "line_items": [
+            {
+                "description": it["description"],
+                "quantity": str(it["quantity"]),
+                "unit_price": _dstr(it["unit_price"]),
+                "amount": _dstr(it["quantity"] * it["unit_price"]),
+            }
+            for it in line_items
+        ],
+        "printed": {
+            "invoice_number": None,
+            "invoice_date": inv_date,
+            "supplier_name": supplier,
+            "customer_name": customer,
+            "subtotal": _fmt_amount_us(_dstr(subtotal)),
+            "tax": _fmt_amount_us(_dstr(tax)),
+            "total": _fmt_amount_us(_dstr(total)),
+            "currency": currency,
+        },
+    }
+
+
+def _make_scanned_pdf_from_image(path: Path, img_path: Path, n_copies: int = 1) -> None:
+    """Wrap a PNG/JPG as a scanned PDF page (n_copies times)."""
+    import io as _io
+    img = Image.open(str(img_path)).convert("RGB")
+    buf = _io.BytesIO()
+    img.save(buf, "PNG")
+    img_bytes = buf.getvalue()
+
+    doc = fitz.open()
+    for _ in range(n_copies):
+        w, h = img.width, img.height
+        page = doc.new_page(width=w, height=h)
+        page.insert_image(fitz.Rect(0, 0, w, h), stream=img_bytes)
+    doc.save(str(path))
+    doc.close()
+
+
 def generate_fixtures(out_dir: Path, seed: int = 42) -> list[dict]:
     """Generate all fixture files into out_dir. Returns list of ground-truth records."""
     out_dir = Path(out_dir)
@@ -1724,6 +2120,7 @@ def generate_fixtures(out_dir: Path, seed: int = 42) -> list[dict]:
     amount_fmts = ["us", "eu", "plain"]
 
     # ---- digital PDF A x7 ----
+    _a001_inv: dict = {}  # captured for dup_invnum fixtures
     for i in range(1, 8):
         fname = f"digital_A_{i:03d}.pdf"
         fpath = out_dir / fname
@@ -1739,6 +2136,8 @@ def generate_fixtures(out_dir: Path, seed: int = 42) -> list[dict]:
             tax_rate=r.choice(tax_rates),
             amount_fmt=amount_fmts[(i - 1) % 3],
         )
+        if i == 1:
+            _a001_inv = inv
         gt.append({"file": fname, "group": "digital_pdf", "expect_status": "validated_ok",
                    "injected": None, "invoices": [inv]})
 
@@ -1776,6 +2175,43 @@ def generate_fixtures(out_dir: Path, seed: int = 42) -> list[dict]:
     )
     gt.append({"file": fname, "group": "digital_pdf", "expect_status": "validated_ok",
                "injected": None, "invoices": [inv]})
+
+    # ---- digital PDF A extra (to reach 20 total digital PDFs) ----
+    for i in range(8, 11):  # A_008, A_009, A_010
+        fname = f"digital_A_{i:03d}.pdf"
+        fpath = out_dir / fname
+        items = _gen_items(r, r.randint(2, 5))
+        inv = _make_pdf_template_A(
+            fpath,
+            inv_number=f"INV-A-{seed}-{i:04d}",
+            inv_date=f"2026-11-{i - 7:02d}",
+            supplier=fake.company(),
+            customer=fake.company(),
+            line_items=items,
+            currency=r.choice(currencies),
+            tax_rate=r.choice(tax_rates),
+            amount_fmt=amount_fmts[(i - 1) % 3],
+        )
+        gt.append({"file": fname, "group": "digital_pdf", "expect_status": "validated_ok",
+                   "injected": None, "invoices": [inv]})
+
+    for i in range(8, 10):  # B_008, B_009
+        fname = f"digital_B_{i:03d}.pdf"
+        fpath = out_dir / fname
+        items = _gen_items(r, r.randint(2, 5))
+        inv = _make_pdf_template_B(
+            fpath,
+            inv_number=f"INV-B-{seed}-{i:04d}",
+            inv_date=f"2026-11-{i:02d}",
+            supplier=fake.company(),
+            customer=fake.company(),
+            line_items=items,
+            currency=r.choice(currencies),
+            tax_rate=r.choice(tax_rates),
+            amount_fmt=amount_fmts[(i - 1) % 3],
+        )
+        gt.append({"file": fname, "group": "digital_pdf", "expect_status": "validated_ok",
+                   "injected": None, "invoices": [inv]})
 
     # ---- images ----
     _make_png(out_dir / "valid_001.png")
@@ -2229,6 +2665,151 @@ def generate_fixtures(out_dir: Path, seed: int = 42) -> list[dict]:
     _make_blank_scan_png(out_dir / "blank.png")
     gt.append({"file": "blank.png", "group": "image_m5", "expect_status": "needs_review",
                "injected": None, "invoices": []})
+
+    # ---- scanned PDFs (wrap M5 images as single-page PDFs) ----
+    for _sf_name, _sf_img, _sf_group, _sf_status, _sf_invs in [
+        ("scanned_clean.pdf",    _scan_clean_path,         "scanned_pdf", "validated_ok",  [SCAN_GT_INVOICE]),
+        ("scanned_mild.pdf",     out_dir / "scan_mild.png",    "scanned_pdf", "validated_ok",  [SCAN_GT_INVOICE]),
+        ("scanned_moderate.pdf", out_dir / "scan_moderate.png","scanned_pdf", "validated_ok",  [SCAN_GT_INVOICE]),
+        ("scanned_severe.pdf",   out_dir / "blurry_severe.png","scanned_pdf", "needs_review",  []),
+        ("scanned_rotated.pdf",  out_dir / "rotated_5deg.png", "scanned_pdf", "validated_ok",  [SCAN_GT_INVOICE]),
+        ("scanned_3page.pdf",    _scan_clean_path,             "scanned_pdf", "validated_ok",  [SCAN_GT_INVOICE]),
+    ]:
+        n = 3 if _sf_name == "scanned_3page.pdf" else 1
+        _make_scanned_pdf_from_image(out_dir / _sf_name, _sf_img, n_copies=n)
+        gt.append({"file": _sf_name, "group": _sf_group,
+                   "expect_status": _sf_status, "injected": None, "invoices": _sf_invs})
+
+    # ---- multi-invoice PDFs ----
+
+    # multi_inv_001: 3 invoices, 1 page each
+    _m1_specs = []
+    for _mi in range(1, 4):
+        _m1_items = _gen_items(r, r.randint(2, 4))
+        _m1_specs.append({
+            "inv_number": f"INV-M1-{seed}-{_mi:04d}",
+            "inv_date": f"2026-11-{_mi:02d}",
+            "supplier": fake.company(),
+            "customer": fake.company(),
+            "currency": r.choice(currencies),
+            "line_items": _m1_items,
+            "tax_rate": r.choice(tax_rates),
+            "n_pages": 1,
+            "amount_fmt": "us",
+        })
+    _m1_gt, _m1_ranges = _make_multi_invoice_pdf(out_dir / "multi_inv_001.pdf", _m1_specs, r, fake)
+    gt.append({"file": "multi_inv_001.pdf", "group": "multi_invoice",
+               "expect_status": "validated_ok", "injected": None,
+               "invoices": _m1_gt, "page_ranges": _m1_ranges})
+
+    # multi_inv_002: mix of 1-page and 2-page invoices (inv1=1p, inv2=2p, inv3=1p)
+    _m2_page_counts = [1, 2, 1]
+    _m2_specs = []
+    for _mi, _np in enumerate(_m2_page_counts, 1):
+        _m2_items = _gen_items(r, r.randint(3, 6))  # more items to fill 2 pages
+        _m2_specs.append({
+            "inv_number": f"INV-M2-{seed}-{_mi:04d}",
+            "inv_date": f"2026-11-{_mi + 3:02d}",
+            "supplier": fake.company(),
+            "customer": fake.company(),
+            "currency": r.choice(currencies),
+            "line_items": _m2_items,
+            "tax_rate": r.choice(tax_rates),
+            "n_pages": _np,
+            "amount_fmt": "us",
+        })
+    _m2_gt, _m2_ranges = _make_multi_invoice_pdf(out_dir / "multi_inv_002.pdf", _m2_specs, r, fake)
+    gt.append({"file": "multi_inv_002.pdf", "group": "multi_invoice",
+               "expect_status": "validated_ok", "injected": None,
+               "invoices": _m2_gt, "page_ranges": _m2_ranges})
+
+    # multi_inv_003: mix of 1, 3, and 2-page invoices (inv1=1p, inv2=3p, inv3=2p, inv4=1p)
+    _m3_page_counts = [1, 3, 2, 1]
+    _m3_specs = []
+    for _mi, _np in enumerate(_m3_page_counts, 1):
+        _m3_items = _gen_items(r, r.randint(4, 8))
+        _m3_specs.append({
+            "inv_number": f"INV-M3-{seed}-{_mi:04d}",
+            "inv_date": f"2026-11-{_mi + 7:02d}",
+            "supplier": fake.company(),
+            "customer": fake.company(),
+            "currency": r.choice(currencies),
+            "line_items": _m3_items,
+            "tax_rate": r.choice(tax_rates),
+            "n_pages": _np,
+            "amount_fmt": "us",
+        })
+    _m3_gt, _m3_ranges = _make_multi_invoice_pdf(out_dir / "multi_inv_003.pdf", _m3_specs, r, fake)
+    gt.append({"file": "multi_inv_003.pdf", "group": "multi_invoice",
+               "expect_status": "validated_ok", "injected": None,
+               "invoices": _m3_gt, "page_ranges": _m3_ranges})
+
+    # ---- injected-error fixtures ----
+
+    # wrong_total x3 (arithmetic error: total printed is subtotal+tax+1.00)
+    for _wi in range(1, 4):
+        _wt_items = _gen_items(r, r.randint(2, 4))
+        _wt_inv = _make_injected_arith_pdf(
+            out_dir / f"wrong_total_{_wi:03d}.pdf",
+            inv_number=f"INV-WT-{seed}-{_wi:04d}",
+            inv_date=f"2026-11-{_wi:02d}",
+            supplier=fake.company(),
+            customer=fake.company(),
+            line_items=_wt_items,
+            currency="USD",
+            tax_rate=10,
+        )
+        gt.append({"file": f"wrong_total_{_wi:03d}.pdf", "group": "injected",
+                   "expect_status": "needs_review",
+                   "injected": {"code": "ARITH_TOTAL"},
+                   "invoices": [_wt_inv]})
+
+    # dup_invnum x2 — same invoice_number, supplier_name, and total as digital_A_001
+    _a001_invnum = _a001_inv.get("invoice_number", f"INV-A-{seed}-0001")
+    _a001_supplier = _a001_inv.get("supplier_name", "SupplierA")
+    _a001_total = _a001_inv.get("total", "100.00")
+    _a001_currency = _a001_inv.get("currency", "USD")
+    for _di in range(1, 3):
+        _dup_inv = _make_injected_dup_pdf(
+            out_dir / f"dup_invnum_{_di:03d}.pdf",
+            inv_number=_a001_invnum,
+            inv_date=f"2026-11-{_di + 3:02d}",
+            supplier=_a001_supplier,
+            customer=fake.company(),
+            total=_a001_total,
+            currency=_a001_currency,
+        )
+        gt.append({"file": f"dup_invnum_{_di:03d}.pdf", "group": "injected",
+                   "expect_status": "needs_review",
+                   "injected": {"code": "DUPLICATE_INVOICE"},
+                   "invoices": [_dup_inv]})
+
+    # missing_invnum x2 (no invoice_number in the PDF text)
+    for _mni in range(1, 3):
+        _mn_items = _gen_items(r, r.randint(2, 3))
+        _mn_inv = _make_injected_missing_invnum_pdf(
+            out_dir / f"missing_invnum_{_mni:03d}.pdf",
+            inv_date=f"2026-11-{_mni + 5:02d}",
+            supplier=fake.company(),
+            customer=fake.company(),
+            line_items=_mn_items,
+            currency="USD",
+            tax_rate=10,
+        )
+        gt.append({"file": f"missing_invnum_{_mni:03d}.pdf", "group": "injected",
+                   "expect_status": "needs_review",
+                   "injected": {"code": "MISSING_REQUIRED"},
+                   "invoices": [_mn_inv]})
+
+    # ---- print count per group ----
+    _group_counts: dict[str, int] = {}
+    for _entry in gt:
+        _g = _entry.get("group", "unknown")
+        _group_counts[_g] = _group_counts.get(_g, 0) + 1
+    print("Fixture counts per group:")
+    for _g, _c in sorted(_group_counts.items()):
+        print(f"  {_g:20s}: {_c}")
+    print(f"  {'TOTAL':20s}: {len(gt)}")
 
     # ---- write ground truth ----
     gt_json = json.dumps(gt, indent=2)

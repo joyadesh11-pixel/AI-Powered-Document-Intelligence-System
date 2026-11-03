@@ -92,7 +92,6 @@ class State(TypedDict, total=False):
 
     # --- bookkeeping
     history: Annotated[list[dict], operator.add]
-    sim: dict                       # dry-run switches; removed at end of M7
 
 
 # ----------------------------------------------------------------- @node wrapper
@@ -108,11 +107,9 @@ def node(name: str, skip_on_error: bool = True):
                 return {}
             t0 = time.perf_counter()
             ok = True
-            attempt = state.get("sim", {}).get(f"_attempt_{name}", 0)
+            attempt = 0
             meta: dict = {}
             try:
-                if state.get("sim", {}).get("raise_in") == name:
-                    raise RuntimeError("injected failure")
                 out = fn(state) or {}
                 meta = out.pop("_meta", {})
             except Exception as exc:  # noqa: BLE001
