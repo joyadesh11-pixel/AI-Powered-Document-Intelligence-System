@@ -1,0 +1,3152 @@
+[
+  {
+    "file": "digital_A_001.pdf",
+    "group": "digital_pdf",
+    "expect_status": "validated_ok",
+    "injected": null,
+    "invoices": [
+      {
+        "invoice_number": "INV-A-42-0001",
+        "invoice_date": "2026-10-01",
+        "supplier_name": "Rodriguez, Figueroa and Sanchez",
+        "customer_name": "Doyle Ltd",
+        "subtotal": "2495.86",
+        "tax": "0.00",
+        "total": "2495.86",
+        "currency": "GBP",
+        "line_items": [
+          {
+            "description": "Consulting Services",
+            "quantity": "9",
+            "unit_price": "126.22",
+            "amount": "1135.98"
+          },
+          {
+            "description": "Hardware Component",
+            "quantity": "4",
+            "unit_price": "339.97",
+            "amount": "1359.88"
+          }
+        ],
+        "printed": {
+          "invoice_number": "INV-A-42-0001",
+          "invoice_date": "2026-10-01",
+          "supplier_name": "Rodriguez, Figueroa and Sanchez",
+          "customer_name": "Doyle Ltd",
+          "subtotal": "2,495.86",
+          "tax": "0.00",
+          "total": "2,495.86",
+          "currency": "GBP"
+        }
+      }
+    ]
+  },
+  {
+    "file": "digital_A_002.pdf",
+    "group": "digital_pdf",
+    "expect_status": "validated_ok",
+    "injected": null,
+    "invoices": [
+      {
+        "invoice_number": "INV-A-42-0002",
+        "invoice_date": "2026-10-02",
+        "supplier_name": "Mcclain, Miller and Henderson",
+        "customer_name": "Davis and Sons",
+        "subtotal": "12967.10",
+        "tax": "648.36",
+        "total": "13615.45",
+        "currency": "USD",
+        "line_items": [
+          {
+            "description": "Consulting Services",
+            "quantity": "1",
+            "unit_price": "51.38",
+            "amount": "51.38"
+          },
+          {
+            "description": "Support Contract",
+            "quantity": "17",
+            "unit_price": "303.00",
+            "amount": "5151.00"
+          },
+          {
+            "description": "Custom Development",
+            "quantity": "7",
+            "unit_price": "359.43",
+            "amount": "2516.01"
+          },
+          {
+            "description": "Custom Development",
+            "quantity": "14",
+            "unit_price": "114.12",
+            "amount": "1597.68"
+          },
+          {
+            "description": "Maintenance",
+            "quantity": "9",
+            "unit_price": "405.67",
+            "amount": "3651.03"
+          }
+        ],
+        "printed": {
+          "invoice_number": "INV-A-42-0002",
+          "invoice_date": "2026-10-02",
+          "supplier_name": "Mcclain, Miller and Henderson",
+          "customer_name": "Davis and Sons",
+          "subtotal": "12.967,10",
+          "tax": "648,36",
+          "total": "13.615,45",
+          "currency": "USD"
+        }
+      }
+    ]
+  },
+  {
+    "file": "digital_A_003.pdf",
+    "group": "digital_pdf",
+    "expect_status": "validated_ok",
+    "injected": null,
+    "invoices": [
+      {
+        "invoice_number": "INV-A-42-0003",
+        "invoice_date": "2026-10-03",
+        "supplier_name": "Guzman, Hoffman and Baldwin",
+        "customer_name": "Gardner, Robinson and Lawrence",
+        "subtotal": "10878.39",
+        "tax": "0.00",
+        "total": "10878.39",
+        "currency": "EUR",
+        "line_items": [
+          {
+            "description": "Cloud Hosting",
+            "quantity": "9",
+            "unit_price": "81.96",
+            "amount": "737.64"
+          },
+          {
+            "description": "Cloud Hosting",
+            "quantity": "4",
+            "unit_price": "50.91",
+            "amount": "203.64"
+          },
+          {
+            "description": "Software License",
+            "quantity": "12",
+            "unit_price": "424.51",
+            "amount": "5094.12"
+          },
+          {
+            "description": "Maintenance",
+            "quantity": "9",
+            "unit_price": "404.53",
+            "amount": "3640.77"
+          },
+          {
+            "description": "API Access",
+            "quantity": "18",
+            "unit_price": "66.79",
+            "amount": "1202.22"
+          }
+        ],
+        "printed": {
+          "invoice_number": "INV-A-42-0003",
+          "invoice_date": "2026-10-03",
+          "supplier_name": "Guzman, Hoffman and Baldwin",
+          "customer_name": "Gardner, Robinson and Lawrence",
+          "subtotal": "10,878",
+          "tax": "0",
+          "total": "10,878",
+          "currency": "EUR"
+        }
+      }
+    ]
+  },
+  {
+    "file": "digital_A_004.pdf",
+    "group": "digital_pdf",
+    "expect_status": "validated_ok",
+    "injected": null,
+    "invoices": [
+      {
+        "invoice_number": "INV-A-42-0004",
+        "invoice_date": "2026-10-04",
+        "supplier_name": "Blake and Sons",
+        "customer_name": "Henderson, Ramirez and Lewis",
+        "subtotal": "7293.08",
+        "tax": "729.31",
+        "total": "8022.39",
+        "currency": "GBP",
+        "line_items": [
+          {
+            "description": "Maintenance",
+            "quantity": "12",
+            "unit_price": "290.79",
+            "amount": "3489.48"
+          },
+          {
+            "description": "Software License",
+            "quantity": "2",
+            "unit_price": "332.33",
+            "amount": "664.66"
+          },
+          {
+            "description": "Training Session",
+            "quantity": "3",
+            "unit_price": "428.38",
+            "amount": "1285.14"
+          },
+          {
+            "description": "Software License",
+            "quantity": "13",
+            "unit_price": "142.60",
+            "amount": "1853.80"
+          }
+        ],
+        "printed": {
+          "invoice_number": "INV-A-42-0004",
+          "invoice_date": "2026-10-04",
+          "supplier_name": "Blake and Sons",
+          "customer_name": "Henderson, Ramirez and Lewis",
+          "subtotal": "7,293.08",
+          "tax": "729.31",
+          "total": "8,022.39",
+          "currency": "GBP"
+        }
+      }
+    ]
+  },
+  {
+    "file": "digital_A_005.pdf",
+    "group": "digital_pdf",
+    "expect_status": "validated_ok",
+    "injected": null,
+    "invoices": [
+      {
+        "invoice_number": "INV-A-42-0005",
+        "invoice_date": "2026-10-05",
+        "supplier_name": "Garcia-James",
+        "customer_name": "Abbott-Munoz",
+        "subtotal": "8810.64",
+        "tax": "1321.60",
+        "total": "10132.24",
+        "currency": "USD",
+        "line_items": [
+          {
+            "description": "Cloud Hosting",
+            "quantity": "12",
+            "unit_price": "108.71",
+            "amount": "1304.52"
+          },
+          {
+            "description": "Training Session",
+            "quantity": "3",
+            "unit_price": "306.52",
+            "amount": "919.56"
+          },
+          {
+            "description": "Hardware Component",
+            "quantity": "18",
+            "unit_price": "365.92",
+            "amount": "6586.56"
+          }
+        ],
+        "printed": {
+          "invoice_number": "INV-A-42-0005",
+          "invoice_date": "2026-10-05",
+          "supplier_name": "Garcia-James",
+          "customer_name": "Abbott-Munoz",
+          "subtotal": "8.810,64",
+          "tax": "1.321,60",
+          "total": "10.132,24",
+          "currency": "USD"
+        }
+      }
+    ]
+  },
+  {
+    "file": "digital_A_006.pdf",
+    "group": "digital_pdf",
+    "expect_status": "validated_ok",
+    "injected": null,
+    "invoices": [
+      {
+        "invoice_number": "INV-A-42-0006",
+        "invoice_date": "2026-10-06",
+        "supplier_name": "Blair PLC",
+        "customer_name": "Dudley Group",
+        "subtotal": "8934.67",
+        "tax": "1340.20",
+        "total": "10274.87",
+        "currency": "EUR",
+        "line_items": [
+          {
+            "description": "Training Session",
+            "quantity": "18",
+            "unit_price": "113.71",
+            "amount": "2046.78"
+          },
+          {
+            "description": "Cloud Hosting",
+            "quantity": "2",
+            "unit_price": "118.38",
+            "amount": "236.76"
+          },
+          {
+            "description": "Consulting Services",
+            "quantity": "11",
+            "unit_price": "203.58",
+            "amount": "2239.38"
+          },
+          {
+            "description": "Software License",
+            "quantity": "7",
+            "unit_price": "457.00",
+            "amount": "3199.00"
+          },
+          {
+            "description": "Maintenance",
+            "quantity": "11",
+            "unit_price": "110.25",
+            "amount": "1212.75"
+          }
+        ],
+        "printed": {
+          "invoice_number": "INV-A-42-0006",
+          "invoice_date": "2026-10-06",
+          "supplier_name": "Blair PLC",
+          "customer_name": "Dudley Group",
+          "subtotal": "8,934",
+          "tax": "1,340",
+          "total": "10,274",
+          "currency": "EUR"
+        }
+      }
+    ]
+  },
+  {
+    "file": "digital_A_007.pdf",
+    "group": "digital_pdf",
+    "expect_status": "validated_ok",
+    "injected": null,
+    "invoices": [
+      {
+        "invoice_number": "INV-A-42-0007",
+        "invoice_date": "2026-10-07",
+        "supplier_name": "Arnold Ltd",
+        "customer_name": "Mcclure, Ward and Lee",
+        "subtotal": "14990.69",
+        "tax": "0.00",
+        "total": "14990.69",
+        "currency": "USD",
+        "line_items": [
+          {
+            "description": "Hardware Component",
+            "quantity": "9",
+            "unit_price": "74.12",
+            "amount": "667.08"
+          },
+          {
+            "description": "Custom Development",
+            "quantity": "18",
+            "unit_price": "135.06",
+            "amount": "2431.08"
+          },
+          {
+            "description": "Maintenance",
+            "quantity": "14",
+            "unit_price": "449.42",
+            "amount": "6291.88"
+          },
+          {
+            "description": "Data Storage",
+            "quantity": "12",
+            "unit_price": "113.56",
+            "amount": "1362.72"
+          },
+          {
+            "description": "Hardware Component",
+            "quantity": "17",
+            "unit_price": "249.29",
+            "amount": "4237.93"
+          }
+        ],
+        "printed": {
+          "invoice_number": "INV-A-42-0007",
+          "invoice_date": "2026-10-07",
+          "supplier_name": "Arnold Ltd",
+          "customer_name": "Mcclure, Ward and Lee",
+          "subtotal": "14,990.69",
+          "tax": "0.00",
+          "total": "14,990.69",
+          "currency": "USD"
+        }
+      }
+    ]
+  },
+  {
+    "file": "digital_B_001.pdf",
+    "group": "digital_pdf",
+    "expect_status": "validated_ok",
+    "injected": null,
+    "invoices": [
+      {
+        "invoice_number": "INV-B-42-0001",
+        "invoice_date": "2026-10-08",
+        "supplier_name": "Williams and Sons",
+        "customer_name": "Galloway-Wyatt",
+        "subtotal": "10303.21",
+        "tax": "0.00",
+        "total": "10303.21",
+        "currency": "GBP",
+        "line_items": [
+          {
+            "description": "Hardware Component",
+            "quantity": "14",
+            "unit_price": "300.22",
+            "amount": "4203.08"
+          },
+          {
+            "description": "Data Storage",
+            "quantity": "13",
+            "unit_price": "299.96",
+            "amount": "3899.48"
+          },
+          {
+            "description": "API Access",
+            "quantity": "17",
+            "unit_price": "129.45",
+            "amount": "2200.65"
+          }
+        ],
+        "printed": {
+          "invoice_number": "INV-B-42-0001",
+          "invoice_date": "2026-10-08",
+          "supplier_name": "Williams and Sons",
+          "customer_name": "Galloway-Wyatt",
+          "subtotal": "10,303.21",
+          "tax": "0.00",
+          "total": "10,303.21",
+          "currency": "GBP"
+        }
+      }
+    ]
+  },
+  {
+    "file": "digital_B_002.pdf",
+    "group": "digital_pdf",
+    "expect_status": "validated_ok",
+    "injected": null,
+    "invoices": [
+      {
+        "invoice_number": "INV-B-42-0002",
+        "invoice_date": "2026-10-09",
+        "supplier_name": "James Group",
+        "customer_name": "Flowers, Martin and Kelly",
+        "subtotal": "4070.26",
+        "tax": "610.54",
+        "total": "4680.80",
+        "currency": "USD",
+        "line_items": [
+          {
+            "description": "Custom Development",
+            "quantity": "9",
+            "unit_price": "385.46",
+            "amount": "3469.14"
+          },
+          {
+            "description": "Cloud Hosting",
+            "quantity": "4",
+            "unit_price": "150.28",
+            "amount": "601.12"
+          }
+        ],
+        "printed": {
+          "invoice_number": "INV-B-42-0002",
+          "invoice_date": "2026-10-09",
+          "supplier_name": "James Group",
+          "customer_name": "Flowers, Martin and Kelly",
+          "subtotal": "4.070,26",
+          "tax": "610,54",
+          "total": "4.680,80",
+          "currency": "USD"
+        }
+      }
+    ]
+  },
+  {
+    "file": "digital_B_003.pdf",
+    "group": "digital_pdf",
+    "expect_status": "validated_ok",
+    "injected": null,
+    "invoices": [
+      {
+        "invoice_number": "INV-B-42-0003",
+        "invoice_date": "2026-10-10",
+        "supplier_name": "Adams, Zuniga and Wong",
+        "customer_name": "Reid, Ferguson and Sanchez",
+        "subtotal": "8240.53",
+        "tax": "1648.11",
+        "total": "9888.64",
+        "currency": "EUR",
+        "line_items": [
+          {
+            "description": "Training Session",
+            "quantity": "17",
+            "unit_price": "382.17",
+            "amount": "6496.89"
+          },
+          {
+            "description": "Custom Development",
+            "quantity": "4",
+            "unit_price": "435.91",
+            "amount": "1743.64"
+          }
+        ],
+        "printed": {
+          "invoice_number": "INV-B-42-0003",
+          "invoice_date": "2026-10-10",
+          "supplier_name": "Adams, Zuniga and Wong",
+          "customer_name": "Reid, Ferguson and Sanchez",
+          "subtotal": "8,240",
+          "tax": "1,648",
+          "total": "9,888",
+          "currency": "EUR"
+        }
+      }
+    ]
+  },
+  {
+    "file": "digital_B_004.pdf",
+    "group": "digital_pdf",
+    "expect_status": "validated_ok",
+    "injected": null,
+    "invoices": [
+      {
+        "invoice_number": "INV-B-42-0004",
+        "invoice_date": "2026-10-11",
+        "supplier_name": "Gray-Mayo",
+        "customer_name": "Watts, Robinson and Nguyen",
+        "subtotal": "15118.79",
+        "tax": "1511.88",
+        "total": "16630.67",
+        "currency": "USD",
+        "line_items": [
+          {
+            "description": "Hardware Component",
+            "quantity": "12",
+            "unit_price": "382.44",
+            "amount": "4589.28"
+          },
+          {
+            "description": "Custom Development",
+            "quantity": "17",
+            "unit_price": "459.65",
+            "amount": "7814.05"
+          },
+          {
+            "description": "Maintenance",
+            "quantity": "11",
+            "unit_price": "246.86",
+            "amount": "2715.46"
+          }
+        ],
+        "printed": {
+          "invoice_number": "INV-B-42-0004",
+          "invoice_date": "2026-10-11",
+          "supplier_name": "Gray-Mayo",
+          "customer_name": "Watts, Robinson and Nguyen",
+          "subtotal": "15,118.79",
+          "tax": "1,511.88",
+          "total": "16,630.67",
+          "currency": "USD"
+        }
+      }
+    ]
+  },
+  {
+    "file": "digital_B_005.pdf",
+    "group": "digital_pdf",
+    "expect_status": "validated_ok",
+    "injected": null,
+    "invoices": [
+      {
+        "invoice_number": "INV-B-42-0005",
+        "invoice_date": "2026-10-12",
+        "supplier_name": "Perez Inc",
+        "customer_name": "Morales-Jones",
+        "subtotal": "2200.71",
+        "tax": "440.14",
+        "total": "2640.85",
+        "currency": "EUR",
+        "line_items": [
+          {
+            "description": "Support Contract",
+            "quantity": "2",
+            "unit_price": "124.23",
+            "amount": "248.46"
+          },
+          {
+            "description": "Maintenance",
+            "quantity": "3",
+            "unit_price": "47.40",
+            "amount": "142.20"
+          },
+          {
+            "description": "API Access",
+            "quantity": "3",
+            "unit_price": "489.10",
+            "amount": "1467.30"
+          },
+          {
+            "description": "Custom Development",
+            "quantity": "5",
+            "unit_price": "68.55",
+            "amount": "342.75"
+          }
+        ],
+        "printed": {
+          "invoice_number": "INV-B-42-0005",
+          "invoice_date": "2026-10-12",
+          "supplier_name": "Perez Inc",
+          "customer_name": "Morales-Jones",
+          "subtotal": "2.200,71",
+          "tax": "440,14",
+          "total": "2.640,85",
+          "currency": "EUR"
+        }
+      }
+    ]
+  },
+  {
+    "file": "digital_B_006.pdf",
+    "group": "digital_pdf",
+    "expect_status": "validated_ok",
+    "injected": null,
+    "invoices": [
+      {
+        "invoice_number": "INV-B-42-0006",
+        "invoice_date": "2026-10-13",
+        "supplier_name": "Walter, Edwards and Rios",
+        "customer_name": "Wilkerson-Day",
+        "subtotal": "12705.12",
+        "tax": "1270.51",
+        "total": "13975.63",
+        "currency": "GBP",
+        "line_items": [
+          {
+            "description": "Training Session",
+            "quantity": "17",
+            "unit_price": "436.85",
+            "amount": "7426.45"
+          },
+          {
+            "description": "Data Storage",
+            "quantity": "7",
+            "unit_price": "464.81",
+            "amount": "3253.67"
+          },
+          {
+            "description": "Support Contract",
+            "quantity": "10",
+            "unit_price": "202.50",
+            "amount": "2025.00"
+          }
+        ],
+        "printed": {
+          "invoice_number": "INV-B-42-0006",
+          "invoice_date": "2026-10-13",
+          "supplier_name": "Walter, Edwards and Rios",
+          "customer_name": "Wilkerson-Day",
+          "subtotal": "12,705",
+          "tax": "1,270",
+          "total": "13,975",
+          "currency": "GBP"
+        }
+      }
+    ]
+  },
+  {
+    "file": "digital_B_007.pdf",
+    "group": "digital_pdf",
+    "expect_status": "validated_ok",
+    "injected": null,
+    "invoices": [
+      {
+        "invoice_number": "INV-B-42-0007",
+        "invoice_date": "2026-10-14",
+        "supplier_name": "Baker and Sons",
+        "customer_name": "Hoffman, Baker and Richards",
+        "subtotal": "3977.95",
+        "tax": "397.80",
+        "total": "4375.74",
+        "currency": "USD",
+        "line_items": [
+          {
+            "description": "Custom Development",
+            "quantity": "15",
+            "unit_price": "64.90",
+            "amount": "973.50"
+          },
+          {
+            "description": "Support Contract",
+            "quantity": "3",
+            "unit_price": "172.35",
+            "amount": "517.05"
+          },
+          {
+            "description": "Maintenance",
+            "quantity": "18",
+            "unit_price": "118.91",
+            "amount": "2140.38"
+          },
+          {
+            "description": "Support Contract",
+            "quantity": "1",
+            "unit_price": "40.14",
+            "amount": "40.14"
+          },
+          {
+            "description": "Consulting Services",
+            "quantity": "8",
+            "unit_price": "38.36",
+            "amount": "306.88"
+          }
+        ],
+        "printed": {
+          "invoice_number": "INV-B-42-0007",
+          "invoice_date": "2026-10-14",
+          "supplier_name": "Baker and Sons",
+          "customer_name": "Hoffman, Baker and Richards",
+          "subtotal": "3,977.95",
+          "tax": "397.80",
+          "total": "4,375.74",
+          "currency": "USD"
+        }
+      }
+    ]
+  },
+  {
+    "file": "digital_C_001.pdf",
+    "group": "digital_pdf",
+    "expect_status": "validated_ok",
+    "injected": null,
+    "invoices": [
+      {
+        "invoice_number": "INV-C-42-0001",
+        "invoice_date": "2026-10-20",
+        "supplier_name": "Ross, Robinson and Bright",
+        "customer_name": "Snyder, Campos and Callahan",
+        "subtotal": "25325.35",
+        "tax": "5065.07",
+        "total": "30390.42",
+        "currency": "GBP",
+        "line_items": [
+          {
+            "description": "Software License",
+            "quantity": "17",
+            "unit_price": "122.81",
+            "amount": "2087.77"
+          },
+          {
+            "description": "API Access",
+            "quantity": "7",
+            "unit_price": "271.92",
+            "amount": "1903.44"
+          },
+          {
+            "description": "Maintenance",
+            "quantity": "19",
+            "unit_price": "238.97",
+            "amount": "4540.43"
+          },
+          {
+            "description": "API Access",
+            "quantity": "14",
+            "unit_price": "99.25",
+            "amount": "1389.50"
+          },
+          {
+            "description": "Software License",
+            "quantity": "14",
+            "unit_price": "180.38",
+            "amount": "2525.32"
+          },
+          {
+            "description": "Data Storage",
+            "quantity": "15",
+            "unit_price": "432.60",
+            "amount": "6489.00"
+          },
+          {
+            "description": "Consulting Services",
+            "quantity": "4",
+            "unit_price": "35.00",
+            "amount": "140.00"
+          },
+          {
+            "description": "Cloud Hosting",
+            "quantity": "4",
+            "unit_price": "128.08",
+            "amount": "512.32"
+          },
+          {
+            "description": "Support Contract",
+            "quantity": "18",
+            "unit_price": "227.06",
+            "amount": "4087.08"
+          },
+          {
+            "description": "Data Storage",
+            "quantity": "6",
+            "unit_price": "142.88",
+            "amount": "857.28"
+          },
+          {
+            "description": "Support Contract",
+            "quantity": "3",
+            "unit_price": "224.35",
+            "amount": "673.05"
+          },
+          {
+            "description": "Custom Development",
+            "quantity": "4",
+            "unit_price": "30.04",
+            "amount": "120.16"
+          }
+        ],
+        "printed": {
+          "invoice_number": "INV-C-42-0001",
+          "invoice_date": "2026-10-20",
+          "supplier_name": "Ross, Robinson and Bright",
+          "customer_name": "Snyder, Campos and Callahan",
+          "subtotal": "25,325.35",
+          "tax": "5,065.07",
+          "total": "30,390.42",
+          "currency": "GBP"
+        }
+      }
+    ]
+  },
+  {
+    "file": "valid_001.png",
+    "group": "image",
+    "expect_status": "validated_ok",
+    "injected": null,
+    "invoices": []
+  },
+  {
+    "file": "valid_001.jpg",
+    "group": "image",
+    "expect_status": "validated_ok",
+    "injected": null,
+    "invoices": []
+  },
+  {
+    "file": "multiframe_001.tiff",
+    "group": "image",
+    "expect_status": "validated_ok",
+    "injected": null,
+    "invoices": []
+  },
+  {
+    "file": "tabular_001.xlsx",
+    "group": "xlsx",
+    "expect_status": "validated_ok",
+    "injected": null,
+    "invoices": [
+      {
+        "invoice_number": "INV-XLS-42-0001",
+        "invoice_date": "2026-10-15",
+        "supplier_name": "Burton Ltd",
+        "customer_name": "Carlson-Cruz",
+        "subtotal": "5908.21",
+        "tax": "590.82",
+        "total": "6499.03",
+        "currency": "USD",
+        "line_items": [
+          {
+            "description": "Custom Development",
+            "quantity": "1",
+            "unit_price": "484.65",
+            "amount": "484.65"
+          },
+          {
+            "description": "Support Contract",
+            "quantity": "6",
+            "unit_price": "206.17",
+            "amount": "1237.02"
+          },
+          {
+            "description": "API Access",
+            "quantity": "7",
+            "unit_price": "433.00",
+            "amount": "3031.00"
+          },
+          {
+            "description": "Consulting Services",
+            "quantity": "6",
+            "unit_price": "192.59",
+            "amount": "1155.54"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "file": "freeform_001.xlsx",
+    "group": "xlsx",
+    "expect_status": "validated_ok",
+    "injected": null,
+    "invoices": [
+      {
+        "invoice_number": "INV-FF-42-0001",
+        "invoice_date": "2026-10-16",
+        "supplier_name": "Ferrell, Rice and Maddox",
+        "customer_name": "Frazier Inc",
+        "subtotal": null,
+        "tax": null,
+        "total": "4928.01",
+        "currency": "EUR",
+        "line_items": []
+      }
+    ]
+  },
+  {
+    "file": "legacy_001.xls",
+    "group": "xls",
+    "expect_status": "validated_ok",
+    "injected": null,
+    "invoices": [
+      {
+        "invoice_number": "INV-XL-42-0001",
+        "invoice_date": "2026-10-17",
+        "supplier_name": "Dyer, Potter and Mack",
+        "customer_name": "Rodriguez-Graham",
+        "subtotal": "6890.49",
+        "tax": "344.52",
+        "total": "7235.01",
+        "currency": "GBP",
+        "line_items": [
+          {
+            "description": "Training Session",
+            "quantity": "15",
+            "unit_price": "146.20",
+            "amount": "2193.00"
+          },
+          {
+            "description": "Custom Development",
+            "quantity": "16",
+            "unit_price": "81.62",
+            "amount": "1305.92"
+          },
+          {
+            "description": "Training Session",
+            "quantity": "7",
+            "unit_price": "484.51",
+            "amount": "3391.57"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "file": "utf8_001.csv",
+    "group": "csv",
+    "expect_status": "validated_ok",
+    "injected": null,
+    "invoices": [
+      {
+        "invoice_number": "INV-CSV-42-0001",
+        "invoice_date": "2026-10-18",
+        "supplier_name": "Smith-Bowen",
+        "customer_name": "Acme, Inc.",
+        "subtotal": "8514.40",
+        "tax": "0.00",
+        "total": "8514.40",
+        "currency": "USD",
+        "line_items": [
+          {
+            "description": "Maintenance",
+            "quantity": "18",
+            "unit_price": "35.17",
+            "amount": "633.06"
+          },
+          {
+            "description": "Cloud Hosting",
+            "quantity": "2",
+            "unit_price": "29.82",
+            "amount": "59.64"
+          },
+          {
+            "description": "API Access",
+            "quantity": "17",
+            "unit_price": "460.10",
+            "amount": "7821.70"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "file": "freeform_001.csv",
+    "group": "csv",
+    "expect_status": "validated_ok",
+    "injected": null,
+    "invoices": [
+      {
+        "invoice_number": "INV-CSV-42-0002",
+        "invoice_date": "2026-10-19",
+        "supplier_name": "Baker, Mason and White",
+        "customer_name": "Harrell LLC",
+        "subtotal": "100.00",
+        "tax": "10.00",
+        "total": "110.00",
+        "currency": "EUR",
+        "line_items": [],
+        "printed": {
+          "invoice_number": "INV-CSV-42-0002",
+          "invoice_date": "2026-10-19",
+          "supplier_name": "Baker, Mason and White",
+          "customer_name": "Harrell LLC",
+          "subtotal": "100.00",
+          "tax": "10.00",
+          "total": "110.00",
+          "currency": "EUR"
+        }
+      }
+    ]
+  },
+  {
+    "file": "cp1252_001.csv",
+    "group": "csv",
+    "expect_status": "validated_ok",
+    "injected": null,
+    "invoices": [
+      {
+        "invoice_number": "INV-CSV-42-0003",
+        "invoice_date": "2026-10-20",
+        "supplier_name": "Romero, Gonzalez and Brooks",
+        "customer_name": "Ryan PLC",
+        "subtotal": "2250.99",
+        "tax": "337.65",
+        "total": "2588.64",
+        "currency": "USD",
+        "line_items": [
+          {
+            "description": "Custom Development",
+            "quantity": "6",
+            "unit_price": "33.16",
+            "amount": "198.96"
+          },
+          {
+            "description": "Custom Development",
+            "quantity": "3",
+            "unit_price": "426.41",
+            "amount": "1279.23"
+          },
+          {
+            "description": "Software License",
+            "quantity": "20",
+            "unit_price": "38.64",
+            "amount": "772.80"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "file": "scanned.pdf",
+    "group": "triage",
+    "eval": false,
+    "expect_status": "needs_review",
+    "injected": null,
+    "invoices": []
+  },
+  {
+    "file": "mixed.pdf",
+    "group": "triage",
+    "eval": true,
+    "expect_status": "validated_ok",
+    "injected": null,
+    "invoices": [
+      {
+        "invoice_number": "INV-MIX-42-0001",
+        "invoice_date": "2026-10-22",
+        "supplier_name": "George Group",
+        "customer_name": "Rodriguez LLC",
+        "subtotal": "4216.84",
+        "tax": "421.68",
+        "total": "4638.52",
+        "currency": "USD",
+        "line_items": [
+          {
+            "description": "Data Storage",
+            "quantity": "4",
+            "unit_price": "471.09",
+            "amount": "1884.36"
+          },
+          {
+            "description": "Maintenance",
+            "quantity": "8",
+            "unit_price": "291.56",
+            "amount": "2332.48"
+          }
+        ],
+        "printed": {
+          "invoice_number": "INV-MIX-42-0001",
+          "invoice_date": "2026-10-22",
+          "supplier_name": "George Group",
+          "customer_name": "Rodriguez LLC",
+          "subtotal": "4,216.84",
+          "tax": "421.68",
+          "total": "4,638.52",
+          "currency": "USD"
+        }
+      }
+    ]
+  },
+  {
+    "file": "garbled_cid.pdf",
+    "group": "triage",
+    "eval": false,
+    "expect_status": "needs_review",
+    "injected": null,
+    "invoices": []
+  },
+  {
+    "file": "garbled_pua.pdf",
+    "group": "triage",
+    "eval": false,
+    "expect_status": "needs_review",
+    "injected": null,
+    "invoices": []
+  },
+  {
+    "file": "blank_page.pdf",
+    "group": "triage",
+    "eval": false,
+    "expect_status": "needs_review",
+    "injected": null,
+    "invoices": []
+  },
+  {
+    "file": "scan_with_pagenum.pdf",
+    "group": "triage",
+    "eval": false,
+    "expect_status": "needs_review",
+    "injected": null,
+    "invoices": []
+  },
+  {
+    "file": "scan_with_pagenum_short.pdf",
+    "group": "triage",
+    "eval": false,
+    "expect_status": "needs_review",
+    "injected": null,
+    "invoices": []
+  },
+  {
+    "file": "borderless_table.pdf",
+    "group": "triage",
+    "eval": true,
+    "expect_status": "validated_ok",
+    "injected": null,
+    "invoices": [
+      {
+        "invoice_number": "INV-BT-001",
+        "invoice_date": "2026-10-25",
+        "supplier_name": "Borderless Corp",
+        "customer_name": "Table Client Ltd",
+        "subtotal": "26779.37",
+        "tax": "2677.94",
+        "total": "29457.31",
+        "currency": "USD",
+        "line_items": [
+          {
+            "description": "Consulting Services",
+            "quantity": "20",
+            "unit_price": "45.58",
+            "amount": "911.60"
+          },
+          {
+            "description": "Maintenance",
+            "quantity": "19",
+            "unit_price": "263.78",
+            "amount": "5011.82"
+          },
+          {
+            "description": "Training Session",
+            "quantity": "7",
+            "unit_price": "336.51",
+            "amount": "2355.57"
+          },
+          {
+            "description": "Cloud Hosting",
+            "quantity": "8",
+            "unit_price": "136.48",
+            "amount": "1091.84"
+          },
+          {
+            "description": "Hardware Component",
+            "quantity": "10",
+            "unit_price": "231.33",
+            "amount": "2313.30"
+          },
+          {
+            "description": "Software License",
+            "quantity": "1",
+            "unit_price": "231.85",
+            "amount": "231.85"
+          },
+          {
+            "description": "Maintenance",
+            "quantity": "4",
+            "unit_price": "41.26",
+            "amount": "165.04"
+          },
+          {
+            "description": "Support Contract",
+            "quantity": "17",
+            "unit_price": "136.27",
+            "amount": "2316.59"
+          },
+          {
+            "description": "Cloud Hosting",
+            "quantity": "3",
+            "unit_price": "440.24",
+            "amount": "1320.72"
+          },
+          {
+            "description": "Cloud Hosting",
+            "quantity": "10",
+            "unit_price": "83.08",
+            "amount": "830.80"
+          },
+          {
+            "description": "Custom Development",
+            "quantity": "10",
+            "unit_price": "307.78",
+            "amount": "3077.80"
+          },
+          {
+            "description": "Custom Development",
+            "quantity": "1",
+            "unit_price": "335.59",
+            "amount": "335.59"
+          },
+          {
+            "description": "Custom Development",
+            "quantity": "10",
+            "unit_price": "466.22",
+            "amount": "4662.20"
+          },
+          {
+            "description": "Software License",
+            "quantity": "5",
+            "unit_price": "135.91",
+            "amount": "679.55"
+          },
+          {
+            "description": "Software License",
+            "quantity": "18",
+            "unit_price": "81.95",
+            "amount": "1475.10"
+          }
+        ],
+        "printed": {
+          "invoice_number": "INV-BT-001",
+          "invoice_date": "2026-10-25",
+          "supplier_name": "Borderless Corp",
+          "customer_name": "Table Client Ltd",
+          "subtotal": "26,779.37",
+          "tax": "2,677.94",
+          "total": "29,457.31",
+          "currency": "USD"
+        }
+      }
+    ]
+  },
+  {
+    "file": "two_column.pdf",
+    "group": "triage",
+    "eval": true,
+    "expect_status": "validated_ok",
+    "injected": null,
+    "invoices": [
+      {
+        "invoice_number": "INV-TC-42-0001",
+        "invoice_date": "2026-10-23",
+        "supplier_name": "Allen-Allen",
+        "customer_name": "Arroyo, Miller and Tucker",
+        "subtotal": "8798.31",
+        "tax": "1319.75",
+        "total": "10118.06",
+        "currency": "GBP",
+        "line_items": [],
+        "printed": {
+          "invoice_number": "INV-TC-42-0001",
+          "invoice_date": "2026-10-23",
+          "supplier_name": "Allen-Allen",
+          "customer_name": "Arroyo, Miller and Tucker",
+          "subtotal": "8,798.31",
+          "tax": "1,319.75",
+          "total": "10,118.06",
+          "currency": "GBP"
+        }
+      }
+    ]
+  },
+  {
+    "file": "bad_truncated.pdf",
+    "group": "bad_files",
+    "expect_status": "failed",
+    "expect_error_code": "CORRUPT_FILE",
+    "injected": null,
+    "invoices": []
+  },
+  {
+    "file": "bad_encrypted.pdf",
+    "group": "bad_files",
+    "expect_status": "failed",
+    "expect_error_code": "ENCRYPTED",
+    "injected": null,
+    "invoices": []
+  },
+  {
+    "file": "bad_empty.bin",
+    "group": "bad_files",
+    "expect_status": "failed",
+    "expect_error_code": "EMPTY_FILE",
+    "injected": null,
+    "invoices": []
+  },
+  {
+    "file": "bad_docx.docx",
+    "group": "bad_files",
+    "expect_status": "failed",
+    "expect_error_code": "UNSUPPORTED_TYPE",
+    "injected": null,
+    "invoices": []
+  },
+  {
+    "file": "bad_corrupt.xlsx",
+    "group": "bad_files",
+    "expect_status": "failed",
+    "expect_error_code": "CORRUPT_FILE",
+    "injected": null,
+    "invoices": []
+  },
+  {
+    "file": "edge_truncated.png",
+    "group": "edge",
+    "expect_status": "validated_ok",
+    "expect_warning_code": "TRUNCATED_IMAGE",
+    "injected": null,
+    "invoices": []
+  },
+  {
+    "file": "edge_pdf_as_jpg.jpg",
+    "group": "edge",
+    "expect_status": "validated_ok",
+    "expect_warning_code": "EXT_MISMATCH",
+    "injected": null,
+    "invoices": []
+  },
+  {
+    "file": "edge_zipbomb.xlsx",
+    "group": "edge",
+    "expect_status": "failed",
+    "expect_error_code": "TOO_LARGE",
+    "injected": null,
+    "invoices": []
+  },
+  {
+    "file": "xlsx_simple_linegrain.xlsx",
+    "group": "sheet_m4",
+    "expect_status": "validated_ok",
+    "injected": null,
+    "invoices": [
+      {
+        "invoice_number": "INV-SL-001",
+        "invoice_date": "2026-10-01",
+        "supplier_name": "Alpha Corp",
+        "customer_name": "Beta Ltd",
+        "subtotal": "1360.00",
+        "tax": "136.00",
+        "total": "1496.00",
+        "currency": "USD",
+        "line_items": [
+          {
+            "description": "Consulting",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Hosting",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Support",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "License",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Training",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Audit",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Config",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Deploy",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Monitor",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Review",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Consulting",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Hosting",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Support",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "License",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Training",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Audit",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Config",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Deploy",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Monitor",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Review",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Consulting",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Hosting",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Support",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "License",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Training",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Audit",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Config",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Deploy",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Monitor",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Review",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Consulting",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Hosting",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Support",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "License",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Training",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Audit",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Config",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Deploy",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Monitor",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Review",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Consulting",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Hosting",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Support",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "License",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Training",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Audit",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Config",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Deploy",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Monitor",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Review",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Consulting",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Hosting",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Support",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "License",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Training",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Audit",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Config",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Deploy",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Monitor",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Review",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Consulting",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Hosting",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Support",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "License",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Training",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Audit",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Config",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Deploy",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          }
+        ]
+      },
+      {
+        "invoice_number": "INV-SL-002",
+        "invoice_date": "2026-10-02",
+        "supplier_name": "Alpha Corp",
+        "customer_name": "Gamma Inc",
+        "subtotal": "1360.00",
+        "tax": "136.00",
+        "total": "1496.00",
+        "currency": "USD",
+        "line_items": [
+          {
+            "description": "Consulting",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Hosting",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Support",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "License",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Training",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Audit",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Config",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Deploy",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Monitor",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Review",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Consulting",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Hosting",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Support",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "License",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Training",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Audit",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Config",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Deploy",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Monitor",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Review",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Consulting",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Hosting",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Support",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "License",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Training",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Audit",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Config",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Deploy",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Monitor",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Review",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Consulting",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Hosting",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Support",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "License",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Training",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Audit",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Config",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Deploy",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Monitor",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Review",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Consulting",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Hosting",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Support",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "License",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Training",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Audit",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Config",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Deploy",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Monitor",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Review",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Consulting",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Hosting",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Support",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "License",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Training",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Audit",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Config",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Deploy",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Monitor",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Review",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Consulting",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Hosting",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Support",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "License",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Training",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Audit",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Config",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Deploy",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          }
+        ]
+      },
+      {
+        "invoice_number": "INV-SL-003",
+        "invoice_date": "2026-10-03",
+        "supplier_name": "Delta LLC",
+        "customer_name": "Epsilon Co",
+        "subtotal": "1360.00",
+        "tax": "136.00",
+        "total": "1496.00",
+        "currency": "EUR",
+        "line_items": [
+          {
+            "description": "Consulting",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Hosting",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Support",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "License",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Training",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Audit",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Config",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Deploy",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Monitor",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Review",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Consulting",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Hosting",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Support",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "License",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Training",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Audit",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Config",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Deploy",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Monitor",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Review",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Consulting",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Hosting",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Support",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "License",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Training",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Audit",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Config",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Deploy",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Monitor",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Review",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Consulting",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Hosting",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Support",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "License",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Training",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Audit",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Config",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Deploy",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Monitor",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Review",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Consulting",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Hosting",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Support",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "License",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Training",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Audit",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Config",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Deploy",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Monitor",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Review",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Consulting",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Hosting",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Support",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "License",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Training",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Audit",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Config",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Deploy",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Monitor",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Review",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Consulting",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Hosting",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Support",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "License",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Training",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Audit",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Config",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          },
+          {
+            "description": "Deploy",
+            "quantity": "2",
+            "unit_price": "10.00",
+            "amount": "20.00"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "file": "xlsx_invoice_grain.xlsx",
+    "group": "sheet_m4",
+    "expect_status": "validated_ok",
+    "injected": null,
+    "invoices": [
+      {
+        "invoice_number": "INV-IG-001",
+        "invoice_date": "2026-10-01",
+        "supplier_name": "Supplier 1",
+        "customer_name": "Customer 1",
+        "subtotal": "100.00",
+        "tax": "10.00",
+        "total": "110.00",
+        "currency": "USD",
+        "line_items": []
+      },
+      {
+        "invoice_number": "INV-IG-002",
+        "invoice_date": "2026-10-02",
+        "supplier_name": "Supplier 2",
+        "customer_name": "Customer 2",
+        "subtotal": "200.00",
+        "tax": "20.00",
+        "total": "220.00",
+        "currency": "USD",
+        "line_items": []
+      },
+      {
+        "invoice_number": "INV-IG-003",
+        "invoice_date": "2026-10-03",
+        "supplier_name": "Supplier 3",
+        "customer_name": "Customer 3",
+        "subtotal": "300.00",
+        "tax": "30.00",
+        "total": "330.00",
+        "currency": "USD",
+        "line_items": []
+      },
+      {
+        "invoice_number": "INV-IG-004",
+        "invoice_date": "2026-10-04",
+        "supplier_name": "Supplier 4",
+        "customer_name": "Customer 4",
+        "subtotal": "400.00",
+        "tax": "40.00",
+        "total": "440.00",
+        "currency": "USD",
+        "line_items": []
+      },
+      {
+        "invoice_number": "INV-IG-005",
+        "invoice_date": "2026-10-05",
+        "supplier_name": "Supplier 5",
+        "customer_name": "Customer 5",
+        "subtotal": "500.00",
+        "tax": "50.00",
+        "total": "550.00",
+        "currency": "USD",
+        "line_items": []
+      }
+    ]
+  },
+  {
+    "file": "csv_invoice_grain.csv",
+    "group": "sheet_m4",
+    "expect_status": "validated_ok",
+    "injected": null,
+    "invoices": [
+      {
+        "invoice_number": "INV-CIG-001",
+        "invoice_date": "2026-10-01",
+        "supplier_name": "Supplier 1",
+        "customer_name": "Customer 1",
+        "subtotal": "200.00",
+        "tax": "20.00",
+        "total": "220.00",
+        "currency": "USD",
+        "line_items": []
+      },
+      {
+        "invoice_number": "INV-CIG-002",
+        "invoice_date": "2026-10-02",
+        "supplier_name": "Supplier 2",
+        "customer_name": "Customer 2",
+        "subtotal": "400.00",
+        "tax": "40.00",
+        "total": "440.00",
+        "currency": "USD",
+        "line_items": []
+      },
+      {
+        "invoice_number": "INV-CIG-003",
+        "invoice_date": "2026-10-03",
+        "supplier_name": "Supplier 3",
+        "customer_name": "Customer 3",
+        "subtotal": "600.00",
+        "tax": "60.00",
+        "total": "660.00",
+        "currency": "USD",
+        "line_items": []
+      },
+      {
+        "invoice_number": "INV-CIG-004",
+        "invoice_date": "2026-10-04",
+        "supplier_name": "Supplier 4",
+        "customer_name": "Customer 4",
+        "subtotal": "800.00",
+        "tax": "80.00",
+        "total": "880.00",
+        "currency": "USD",
+        "line_items": []
+      }
+    ]
+  },
+  {
+    "file": "xlsx_odd_headers.xlsx",
+    "group": "sheet_m4",
+    "expect_status": "needs_review",
+    "injected": null,
+    "invoices": [
+      {
+        "invoice_number": "OH-001",
+        "invoice_date": "2026-10-15",
+        "supplier_name": "Widgets Inc",
+        "customer_name": "Acme Corp",
+        "subtotal": null,
+        "tax": null,
+        "total": "500.00",
+        "currency": "USD",
+        "line_items": []
+      },
+      {
+        "invoice_number": "OH-002",
+        "invoice_date": "2026-10-16",
+        "supplier_name": "Widgets Inc",
+        "customer_name": "Beta Ltd",
+        "subtotal": null,
+        "tax": null,
+        "total": "500.00",
+        "currency": "GBP",
+        "line_items": []
+      }
+    ]
+  },
+  {
+    "file": "xlsx_ambiguous_dates.xlsx",
+    "group": "sheet_m4",
+    "expect_status": "needs_review",
+    "injected": null,
+    "invoices": []
+  },
+  {
+    "file": "xlsx_multisheet_same_headers.xlsx",
+    "group": "sheet_m4",
+    "expect_status": "needs_review",
+    "injected": null,
+    "invoices": []
+  },
+  {
+    "file": "xlsx_hidden_sheet.xlsx",
+    "group": "sheet_m4",
+    "expect_status": "needs_review",
+    "injected": null,
+    "invoices": []
+  },
+  {
+    "file": "xlsx_merged_header.xlsx",
+    "group": "sheet_m4",
+    "expect_status": "needs_review",
+    "injected": null,
+    "invoices": []
+  },
+  {
+    "file": "xlsx_banner_rows.xlsx",
+    "group": "sheet_m4",
+    "expect_status": "needs_review",
+    "injected": null,
+    "invoices": []
+  },
+  {
+    "file": "xlsx_formula_nocache.xlsx",
+    "group": "sheet_m4",
+    "expect_status": "needs_review",
+    "injected": null,
+    "invoices": []
+  },
+  {
+    "file": "xlsx_2sheets_tabular_plus_note.xlsx",
+    "group": "sheet_m4",
+    "expect_status": "needs_review",
+    "injected": null,
+    "invoices": []
+  },
+  {
+    "file": "xlsx_excel_dates.xlsx",
+    "group": "sheet_m4",
+    "expect_status": "needs_review",
+    "injected": null,
+    "invoices": []
+  },
+  {
+    "file": "xlsx_tiny_4row.xlsx",
+    "group": "sheet_m4",
+    "expect_status": "needs_review",
+    "injected": null,
+    "invoices": []
+  },
+  {
+    "file": "xlsx_leading_zeros.xlsx",
+    "group": "sheet_m4",
+    "expect_status": "needs_review",
+    "injected": null,
+    "invoices": []
+  },
+  {
+    "file": "xlsx_totals_row.xlsx",
+    "group": "sheet_m4",
+    "expect_status": "needs_review",
+    "injected": null,
+    "invoices": []
+  },
+  {
+    "file": "xlsx_header_money_equal.xlsx",
+    "group": "sheet_m4",
+    "expect_status": "needs_review",
+    "injected": null,
+    "invoices": []
+  },
+  {
+    "file": "xlsx_header_money_differ.xlsx",
+    "group": "sheet_m4",
+    "expect_status": "needs_review",
+    "injected": null,
+    "invoices": []
+  },
+  {
+    "file": "xlsx_arith_error.xlsx",
+    "group": "sheet_m4",
+    "expect_status": "needs_review",
+    "injected": null,
+    "invoices": [
+      {
+        "invoice_number": "INV-AE-001",
+        "invoice_date": "2026-10-01",
+        "supplier_name": "Acme",
+        "customer_name": "Beta",
+        "subtotal": "600.00",
+        "tax": "60.00",
+        "total": "660.00",
+        "currency": "USD",
+        "line_items": []
+      }
+    ]
+  },
+  {
+    "file": "csv_headeronly.csv",
+    "group": "sheet_m4",
+    "expect_status": "needs_review",
+    "injected": null,
+    "invoices": []
+  },
+  {
+    "file": "csv_cp1252_eu.csv",
+    "group": "sheet_m4",
+    "expect_status": "needs_review",
+    "injected": null,
+    "invoices": []
+  },
+  {
+    "file": "perf_5000x30.xlsx",
+    "group": "sheet_m4_perf",
+    "expect_status": "needs_review",
+    "injected": null,
+    "invoices": []
+  },
+  {
+    "file": "scan_clean.png",
+    "group": "image_m5",
+    "expect_status": "validated_ok",
+    "injected": null,
+    "invoices": [
+      {
+        "invoice_number": "SCAN-0001",
+        "invoice_date": "2026-11-01",
+        "supplier_name": "ScanCo Ltd",
+        "customer_name": "TestClient Corp",
+        "subtotal": "90.00",
+        "tax": "9.00",
+        "total": "99.00",
+        "currency": "USD",
+        "line_items": [
+          {
+            "description": "Widget",
+            "quantity": "10",
+            "unit_price": "5.00",
+            "amount": "50.00"
+          },
+          {
+            "description": "Gadget",
+            "quantity": "4",
+            "unit_price": "10.00",
+            "amount": "40.00"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "file": "scan_mild.png",
+    "group": "image_m5",
+    "expect_status": "validated_ok",
+    "injected": null,
+    "invoices": [
+      {
+        "invoice_number": "SCAN-0001",
+        "invoice_date": "2026-11-01",
+        "supplier_name": "ScanCo Ltd",
+        "customer_name": "TestClient Corp",
+        "subtotal": "90.00",
+        "tax": "9.00",
+        "total": "99.00",
+        "currency": "USD",
+        "line_items": [
+          {
+            "description": "Widget",
+            "quantity": "10",
+            "unit_price": "5.00",
+            "amount": "50.00"
+          },
+          {
+            "description": "Gadget",
+            "quantity": "4",
+            "unit_price": "10.00",
+            "amount": "40.00"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "file": "scan_moderate.png",
+    "group": "image_m5",
+    "expect_status": "validated_ok",
+    "injected": null,
+    "invoices": [
+      {
+        "invoice_number": "SCAN-0001",
+        "invoice_date": "2026-11-01",
+        "supplier_name": "ScanCo Ltd",
+        "customer_name": "TestClient Corp",
+        "subtotal": "90.00",
+        "tax": "9.00",
+        "total": "99.00",
+        "currency": "USD",
+        "line_items": [
+          {
+            "description": "Widget",
+            "quantity": "10",
+            "unit_price": "5.00",
+            "amount": "50.00"
+          },
+          {
+            "description": "Gadget",
+            "quantity": "4",
+            "unit_price": "10.00",
+            "amount": "40.00"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "file": "blurry_severe.png",
+    "group": "image_m5",
+    "expect_status": "needs_review",
+    "injected": null,
+    "invoices": []
+  },
+  {
+    "file": "rotated_5deg.png",
+    "group": "image_m5",
+    "expect_status": "validated_ok",
+    "injected": null,
+    "invoices": [
+      {
+        "invoice_number": "SCAN-0001",
+        "invoice_date": "2026-11-01",
+        "supplier_name": "ScanCo Ltd",
+        "customer_name": "TestClient Corp",
+        "subtotal": "90.00",
+        "tax": "9.00",
+        "total": "99.00",
+        "currency": "USD",
+        "line_items": [
+          {
+            "description": "Widget",
+            "quantity": "10",
+            "unit_price": "5.00",
+            "amount": "50.00"
+          },
+          {
+            "description": "Gadget",
+            "quantity": "4",
+            "unit_price": "10.00",
+            "amount": "40.00"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "file": "rotated_90.png",
+    "group": "image_m5",
+    "expect_status": "validated_ok",
+    "injected": null,
+    "invoices": [
+      {
+        "invoice_number": "SCAN-0001",
+        "invoice_date": "2026-11-01",
+        "supplier_name": "ScanCo Ltd",
+        "customer_name": "TestClient Corp",
+        "subtotal": "90.00",
+        "tax": "9.00",
+        "total": "99.00",
+        "currency": "USD",
+        "line_items": [
+          {
+            "description": "Widget",
+            "quantity": "10",
+            "unit_price": "5.00",
+            "amount": "50.00"
+          },
+          {
+            "description": "Gadget",
+            "quantity": "4",
+            "unit_price": "10.00",
+            "amount": "40.00"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "file": "tiny_300px.png",
+    "group": "image_m5",
+    "expect_status": "needs_review",
+    "injected": null,
+    "invoices": []
+  },
+  {
+    "file": "exif_rotated.jpg",
+    "group": "image_m5",
+    "expect_status": "validated_ok",
+    "injected": null,
+    "invoices": [
+      {
+        "invoice_number": "SCAN-0001",
+        "invoice_date": "2026-11-01",
+        "supplier_name": "ScanCo Ltd",
+        "customer_name": "TestClient Corp",
+        "subtotal": "90.00",
+        "tax": "9.00",
+        "total": "99.00",
+        "currency": "USD",
+        "line_items": [
+          {
+            "description": "Widget",
+            "quantity": "10",
+            "unit_price": "5.00",
+            "amount": "50.00"
+          },
+          {
+            "description": "Gadget",
+            "quantity": "4",
+            "unit_price": "10.00",
+            "amount": "40.00"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "file": "scan_3frame.tiff",
+    "group": "image_m5",
+    "expect_status": "validated_ok",
+    "injected": null,
+    "invoices": [
+      {
+        "invoice_number": "SCAN-0001",
+        "invoice_date": "2026-11-01",
+        "supplier_name": "ScanCo Ltd",
+        "customer_name": "TestClient Corp",
+        "subtotal": "90.00",
+        "tax": "9.00",
+        "total": "99.00",
+        "currency": "USD",
+        "line_items": [
+          {
+            "description": "Widget",
+            "quantity": "10",
+            "unit_price": "5.00",
+            "amount": "50.00"
+          },
+          {
+            "description": "Gadget",
+            "quantity": "4",
+            "unit_price": "10.00",
+            "amount": "40.00"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "file": "blank.png",
+    "group": "image_m5",
+    "expect_status": "needs_review",
+    "injected": null,
+    "invoices": []
+  }
+]
