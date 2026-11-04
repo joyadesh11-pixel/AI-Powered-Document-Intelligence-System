@@ -83,6 +83,7 @@ One escalation maximum; after that a human reviews.
 | D13 | numpy + opencv-python-headless for deskew and blur scoring (M5) | pip-only on Windows; headless avoids GUI dependency; numpy already required by rapidocr |
 | D14 | httpx (test-only) | FastAPI TestClient requires it; was installed but unlisted |
 | D15 | Pipeline reads uploads through a hard link named `<sha256><ext>` | files are stored by hash (no extension) but intake picks sheet/image handling from the extension; link avoids copying and keeps storage unchanged |
+| D16 | Frontend: next, react, react-dom, typescript (+ @types) in frontend/package.json | Next.js App Router per docs/07; no UI or state library |
 
 ## Scalability story (qualitative; measured numbers go in the eval report)
 1,000 pages/day is about 2 pages/min over 8 hours, so one worker suffices; the design scales by

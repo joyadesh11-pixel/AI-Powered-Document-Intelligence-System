@@ -6,6 +6,7 @@ import { usePoll } from "@/lib/usePoll";
 import { isTerminal } from "@/lib/types";
 import { UploadZone } from "@/components/UploadZone";
 import { JobTable } from "@/components/JobTable";
+import { SearchBar } from "@/components/SearchBar";
 
 const PAGE_SIZE = 50;
 
@@ -69,7 +70,7 @@ export default function Home() {
         <JobsTab />
       </div>
       <div hidden={tab !== "search"}>
-        <p className="muted">Search arrives in checkpoint C.</p>
+        <SearchBar />
       </div>
     </>
   );
