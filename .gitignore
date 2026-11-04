@@ -54,3 +54,7 @@ CLAUDE.local.md
 # eval/ground_truth.json, eval/reports/, docs/, reference/, graph.png
 
 backend/data/
+
+CLAUDE.md
+.claude/
+reference/
