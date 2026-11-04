@@ -1,10 +1,10 @@
 """Document processing service.
 
-process_document() drives stream_process() to get both progress events and the
-final result from a single pipeline run.  Per-node events are committed in short
-separate transactions so the API can read current_node while the document is
-still running.  The full result (invoices, pages, issues) is committed in one
-final transaction.
+process_document() claims the document, then drives stream_process() to get
+both progress events and the final result from a single pipeline run.
+Per-node events are committed in short separate transactions so the API can
+read current_node while the document is still running.  The full result
+(invoices, pages, issues) is committed in one final transaction.
 
 DBSeenStore bridges the pipeline's SeenStore protocol to the invoices table.
 DBMappingCache bridges the pipeline's mapping_cache callable to sheet_mapping_cache.
@@ -12,12 +12,13 @@ DBMappingCache bridges the pipeline's mapping_cache callable to sheet_mapping_ca
 from __future__ import annotations
 
 import uuid
-from datetime import date, datetime, timezone
+from dataclasses import dataclass
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
-from pathlib import Path
 from typing import Any
 
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import and_, or_, update
+from sqlalchemy.exc import DisconnectionError, IntegrityError, InterfaceError, OperationalError
 from sqlalchemy.orm import Session
 
 from app.db.models import (
@@ -28,13 +29,30 @@ from app.pipeline.config import get_config
 from app.pipeline.graph import stream_process
 from app.pipeline.state import Deps
 from app.pipeline.validation.duplicates import compute_dup_key
-from app.schemas.models import DocStatus, ErrorCode, IssueCode, PipelineResult
+from app.schemas.models import DocStatus, ErrorCode, InvoiceStatus, IssueCode, PipelineResult, Severity
+from app.services.errors import InfraError
+from app.services.ingest import upload_dir
+from app.services.utils import worst_status
 
-_UPLOAD_DIR = Path(__file__).resolve().parents[2] / "data" / "uploads"
+# Connection-level DB failures: transient, so the worker may retry the task.
+_INFRA_ERRORS = (OperationalError, InterfaceError, DisconnectionError)
+_MAX_ERROR_CHARS = 500
 
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _short_error(exc: BaseException) -> str:
+    """One-line error text for the documents row: no traceback, bounded length."""
+    return f"{type(exc).__name__}: {exc}"[:_MAX_ERROR_CHARS]
+
+
+@dataclass
+class ProcessOutcome:
+    status: str
+    should_index: bool
+    skipped: bool = False   # True when claim() refused (redelivery or another worker owns it)
 
 
 # ---------------------------------------------------------------------------
@@ -92,129 +110,159 @@ class DBMappingCache:
 
 
 # ---------------------------------------------------------------------------
-# Main processing function
+# Claim + main processing function
 # ---------------------------------------------------------------------------
+
+def claim(document_id: uuid.UUID, session: Session) -> bool:
+    """Atomically move a document to `processing`; return False if not ours to run.
+
+    Claimable: `queued`, or `processing` whose last update is older than the task
+    time limit (the worker that owned it died).  Anything else means a duplicate
+    delivery or a finished document, and the caller must not run the pipeline.
+    """
+    cfg = get_config()
+    # updated_at is stored as naive UTC; compare against naive UTC
+    now = _now().replace(tzinfo=None)
+    stale_before = now - timedelta(seconds=cfg.TASK_TIME_LIMIT_S)
+    result = session.execute(
+        update(Document)
+        .where(
+            Document.id == document_id,
+            or_(
+                Document.status == DocStatus.queued.value,
+                and_(Document.status == DocStatus.processing.value, Document.updated_at < stale_before),
+            ),
+        )
+        .values(status=DocStatus.processing.value, error=None, error_code=None,
+                current_node=None, updated_at=now)
+        .execution_options(synchronize_session=False)
+    )
+    session.commit()
+    return result.rowcount == 1
+
 
 def process_document(
     document_id: uuid.UUID,
     session: Session,
     llm: Any = None,
-    embedder: Any = None,
-) -> None:
+) -> ProcessOutcome:
     """Drive the pipeline for document_id, persisting progress and results.
 
     Per-node progress events are committed immediately so the API can show
     current_node while processing.  The full result is persisted in one final
-    transaction.  On any unexpected exception: status=failed, INTERNAL_ERROR.
+    transaction.  DB connection failures raise InfraError (retryable) after a
+    best-effort reset to `queued`; any other exception marks the document
+    failed/INTERNAL_ERROR and is re-raised.
     """
     doc = session.get(Document, document_id)
     if doc is None:
         raise ValueError(f"Document {document_id} not found")
 
-    cfg = get_config()
-    if llm is None:
-        from app.pipeline.llm.client import build_llm_client
-        llm = build_llm_client(cfg)
-
-    mapping_cache = DBMappingCache(session)
-    seen_store = DBSeenStore(session)
-
-    deps: Deps = {
-        "config": cfg,
-        "llm": llm,
-        "seen_store": seen_store,
-        "mapping_cache": mapping_cache,
-    }
-
-    # Clean up data from any previous attempt (keeps processing_events history)
-    _delete_previous_result_data(document_id, session)
-
-    doc.status = "processing"
-    doc.error = None
-    doc.error_code = None
-    doc.current_node = None
-    doc.updated_at = _now()
-    session.commit()
-
-    file_path = str(_UPLOAD_DIR / doc.file_hash)
-    attempt = doc.attempt
-
     try:
-        result_dict: dict | None = None
+        if not claim(document_id, session):
+            session.refresh(doc)
+            return ProcessOutcome(status=doc.status, should_index=False, skipped=True)
+        session.refresh(doc)
 
-        for node_name, update in stream_process(file_path, deps=deps):
-            # Capture the final result written by finalize/fail nodes
-            if "result" in update:
-                result_dict = update["result"]
+        cfg = get_config()
+        if llm is None:
+            from app.services.providers import get_llm
+            llm = get_llm()
 
-            # Short commit: update current_node + write event
-            try:
-                doc_reload = session.get(Document, document_id)
-                if doc_reload is not None:
-                    doc_reload.current_node = node_name
-                    doc_reload.updated_at = _now()
+        mapping_cache = DBMappingCache(session)
+        deps: Deps = {
+            "config": cfg,
+            "llm": llm,
+            "seen_store": DBSeenStore(session),
+            "mapping_cache": mapping_cache,
+        }
 
-                history_entry: dict | None = None
-                for h in (update.get("history") or []):
-                    if h.get("node") == node_name:
-                        history_entry = h
-                        break
+        # Clean up data from any previous attempt (keeps processing_events history)
+        _delete_previous_result_data(document_id, session)
+        session.commit()
 
-                session.add(ProcessingEvent(
-                    document_id=document_id,
-                    attempt=attempt,
-                    node=node_name,
-                    seconds=history_entry.get("seconds") if history_entry else None,
-                    ok=history_entry.get("ok") if history_entry else None,
-                    meta=history_entry.get("meta") if history_entry else None,
-                    at=_now(),
-                ))
-                session.commit()
-            except Exception:
-                session.rollback()
-
-        if result_dict is None:
-            raise RuntimeError("stream_process completed without producing a result")
-
-        result = PipelineResult.model_validate(result_dict)
-
+        result = _run_pipeline(doc, deps, session)
+        _persist_result(document_id, result, session, mapping_cache)
+        session.commit()
+    except _INFRA_ERRORS as exc:
+        session.rollback()
+        _requeue_best_effort(document_id, session)
+        raise InfraError(_short_error(exc)) from exc
     except Exception as exc:
-        try:
-            doc_reload = session.get(Document, document_id)
-            if doc_reload is not None:
-                doc_reload.status = DocStatus.failed.value
-                doc_reload.error_code = ErrorCode.INTERNAL_ERROR.value
-                doc_reload.error = str(exc)
-                doc_reload.finished_at = _now()
-                doc_reload.updated_at = _now()
-                session.commit()
-        except Exception:
-            session.rollback()
+        session.rollback()
+        _mark_failed(document_id, session, exc)
         raise
 
+    session.refresh(doc)
+    return ProcessOutcome(status=doc.status, should_index=doc.status != DocStatus.failed.value)
+
+
+def _run_pipeline(doc: Document, deps: Deps, session: Session) -> PipelineResult:
+    """Iterate stream_process, writing one processing_events row per node."""
+    file_path = str(upload_dir() / doc.file_hash)
+    attempt = doc.attempt
+    result_dict: dict | None = None
+
+    for node_name, node_update in stream_process(file_path, deps=deps):
+        # Capture the final result written by finalize/fail nodes
+        if "result" in node_update:
+            result_dict = node_update["result"]
+
+        history_entry: dict | None = None
+        for h in (node_update.get("history") or []):
+            if h.get("node") == node_name:
+                history_entry = h
+                break
+
+        doc.current_node = node_name
+        doc.updated_at = _now()
+        session.add(ProcessingEvent(
+            document_id=doc.id,
+            attempt=attempt,
+            node=node_name,
+            seconds=history_entry.get("seconds") if history_entry else None,
+            ok=history_entry.get("ok") if history_entry else None,
+            meta=history_entry.get("meta") if history_entry else None,
+            at=_now(),
+        ))
+        session.commit()
+
+    if result_dict is None:
+        raise RuntimeError("stream_process completed without producing a result")
+    return PipelineResult.model_validate(result_dict)
+
+
+def _requeue_best_effort(document_id: uuid.UUID, session: Session) -> None:
+    """Put the document back to `queued` so a retry can claim it (DB may still be down)."""
     try:
-        _persist_result(document_id, result, session, mapping_cache)
+        session.execute(
+            update(Document).where(Document.id == document_id)
+            .values(status=DocStatus.queued.value, current_node=None, updated_at=_now())
+            .execution_options(synchronize_session=False)
+        )
         session.commit()
     except Exception:
         session.rollback()
-        try:
-            doc_reload = session.get(Document, document_id)
-            if doc_reload is not None:
-                doc_reload.status = DocStatus.failed.value
-                doc_reload.error_code = ErrorCode.INTERNAL_ERROR.value
-                doc_reload.error = "Failed to persist pipeline result"
-                doc_reload.finished_at = _now()
-                doc_reload.updated_at = _now()
-                session.commit()
-        except Exception:
-            session.rollback()
-        raise
+
+
+def _mark_failed(document_id: uuid.UUID, session: Session, exc: BaseException) -> None:
+    try:
+        session.execute(
+            update(Document).where(Document.id == document_id)
+            .values(status=DocStatus.failed.value, error_code=ErrorCode.INTERNAL_ERROR.value,
+                    error=_short_error(exc), finished_at=_now(), updated_at=_now())
+            .execution_options(synchronize_session=False)
+        )
+        session.commit()
+    except Exception:
+        session.rollback()
 
 
 def _delete_previous_result_data(document_id: uuid.UUID, session: Session) -> None:
-    """Remove invoices, pages, and chunks from previous attempts.
+    """Remove invoices, pages, chunks and issues from previous attempts.
     Processing events are kept for audit history.
     """
+    session.query(ValidationIssue).filter_by(document_id=document_id).delete(synchronize_session=False)
     session.query(Invoice).filter_by(document_id=document_id).delete(synchronize_session=False)
     session.query(DocumentPage).filter_by(document_id=document_id).delete(synchronize_session=False)
     session.query(Chunk).filter_by(document_id=document_id).delete(synchronize_session=False)
@@ -240,6 +288,7 @@ def _persist_result(
     doc.pipeline_version = result.pipeline_version
     doc.timings = result.timings
     doc.llm_usage = result.llm_usage
+    doc.current_node = None
     doc.finished_at = _now()
     doc.updated_at = _now()
 
@@ -300,14 +349,26 @@ def _persist_result(
                         session.flush()
                     dup_key_to_id[dup_key] = inv_db.id
                 except IntegrityError:
+                    # Lost a race: another document committed this key after our
+                    # validate ran.  Store as a flagged duplicate, like validate would.
                     existing = session.query(Invoice).filter_by(dup_key=dup_key).first()
                     inv_db = _build_invoice_row(
                         document_id, inv_obj,
                         dup_key=None,
                         dup_of=existing.id if existing else None,
                     )
+                    inv_db.status = InvoiceStatus.needs_review.value
                     session.add(inv_db)
                     session.flush()
+                    session.add(ValidationIssue(
+                        document_id=document_id,
+                        invoice_id=inv_db.id,
+                        code=IssueCode.DUPLICATE_INVOICE.value,
+                        severity=Severity.error.value,
+                        field="invoice_number",
+                        message="Duplicate invoice found in document store (concurrent upload)",
+                        location={},
+                    ))
                 _add_line_items_and_issues(session, inv_db, inv_obj, document_id)
                 continue
             else:
@@ -315,6 +376,12 @@ def _persist_result(
                 session.flush()
 
         _add_line_items_and_issues(session, inv_db, inv_obj, document_id)
+
+    # Document status = worst of the pipeline's verdict and the persisted invoices
+    if result.status != DocStatus.failed and result.invoices:
+        session.flush()
+        statuses = [r[0] for r in session.query(Invoice.status).filter_by(document_id=document_id)]
+        doc.status = worst_status([result.status.value, *statuses])
 
     # Store sheet mapping in cache
     if result.header_hash and result.sheet_mapping:

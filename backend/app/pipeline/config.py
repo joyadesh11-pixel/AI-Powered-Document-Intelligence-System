@@ -83,6 +83,20 @@ class Config:
     DATABASE_URL: str = "postgresql+psycopg2://dociq:dociq@127.0.0.1:5433/dociq"
     REDIS_URL: str = "redis://localhost:6379/0"
 
+    # --- services / api / workers (never read by pipeline nodes)
+    UPLOAD_DIR: str = ""                  # "" -> backend/data/uploads
+    API_KEY: str = field(default="", repr=False)  # "" -> auth off; repr=False keeps it out of logs
+    CORS_ORIGINS: str = "http://localhost:3000"   # comma-separated
+    MAX_FILES_PER_REQUEST: int = 20
+    INDEX_BATCH_SIZE: int = 32
+    CHUNK_CHARS: int = 1000
+    CHUNK_OVERLAP: int = 100
+    RATE_LIMIT: str = ""                  # e.g. "60/minute"; "" -> off
+    CELERY_TASK_ALWAYS_EAGER: bool = False
+    TASK_TIME_LIMIT_S: int = 600
+    TASK_SOFT_TIME_LIMIT_S: int = 540
+    STALE_QUEUED_MINUTES: int = 5
+
 
 def get_config() -> Config:
     """Return a Config instance populated from environment variables."""
@@ -122,4 +136,16 @@ def get_config() -> Config:
         EMBED_DIM=_env_int("EMBED_DIM", 768),
         DATABASE_URL=_env("DATABASE_URL", "postgresql+psycopg2://dociq:dociq@127.0.0.1:5433/dociq"),
         REDIS_URL=_env("REDIS_URL", "redis://localhost:6379/0"),
+        UPLOAD_DIR=_env("UPLOAD_DIR", ""),
+        API_KEY=_env("API_KEY", ""),
+        CORS_ORIGINS=_env("CORS_ORIGINS", "http://localhost:3000"),
+        MAX_FILES_PER_REQUEST=_env_int("MAX_FILES_PER_REQUEST", 20),
+        INDEX_BATCH_SIZE=_env_int("INDEX_BATCH_SIZE", 32),
+        CHUNK_CHARS=_env_int("CHUNK_CHARS", 1000),
+        CHUNK_OVERLAP=_env_int("CHUNK_OVERLAP", 100),
+        RATE_LIMIT=_env("RATE_LIMIT", ""),
+        CELERY_TASK_ALWAYS_EAGER=_env("CELERY_TASK_ALWAYS_EAGER", "0").lower() in ("1", "true", "yes"),
+        TASK_TIME_LIMIT_S=_env_int("TASK_TIME_LIMIT_S", 600),
+        TASK_SOFT_TIME_LIMIT_S=_env_int("TASK_SOFT_TIME_LIMIT_S", 540),
+        STALE_QUEUED_MINUTES=_env_int("STALE_QUEUED_MINUTES", 5),
     )

@@ -22,3 +22,15 @@ def compute_document_status(invoice_statuses: list[str]) -> str:
         if worst == InvoiceStatus.needs_review.value
         else DocStatus.validated_ok.value
     )
+
+
+_STATUS_RANK = {
+    DocStatus.validated_ok.value: 0,
+    DocStatus.needs_review.value: 1,
+    DocStatus.failed.value: 2,
+}
+
+
+def worst_status(statuses: list[str]) -> str:
+    """Worst of document/invoice statuses: failed > needs_review > validated_ok."""
+    return max(statuses, key=lambda s: _STATUS_RANK.get(s, 1))

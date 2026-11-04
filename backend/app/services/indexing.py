@@ -1,25 +1,28 @@
 """Indexing service: chunk documents and embed them with pgvector.
 
-Failure leaves chunks with indexed=False; never changes document status.
-A periodic Celery task (M8b) retries unindexed documents.
+Chunks are written first (indexed=False), then embedded in batches of
+INDEX_BATCH_SIZE.  A failing batch leaves only its own chunks unindexed;
+embed_pending() (periodic task, corrections) retries them later.
+Never reads or changes document status.
 """
 from __future__ import annotations
 
+import logging
 import uuid
 from typing import TYPE_CHECKING
 
 from sqlalchemy.orm import Session
 
 from app.db.models import Chunk, Document, DocumentPage, Invoice
+from app.pipeline.config import get_config
 
 if TYPE_CHECKING:
     from app.services.embedder import Embedder
 
-_PAGE_CHUNK_SIZE = 1000   # characters
-_PAGE_CHUNK_OVERLAP = 100
+log = logging.getLogger(__name__)
 
 
-def _chunk_text(text: str, size: int = _PAGE_CHUNK_SIZE, overlap: int = _PAGE_CHUNK_OVERLAP) -> list[str]:
+def _chunk_text(text: str, size: int, overlap: int) -> list[str]:
     """Split text into overlapping chunks."""
     if not text:
         return []
@@ -34,7 +37,8 @@ def _chunk_text(text: str, size: int = _PAGE_CHUNK_SIZE, overlap: int = _PAGE_CH
     return chunks
 
 
-def _invoice_summary_text(inv: Invoice) -> str:
+def invoice_summary_text(inv: Invoice) -> str:
+    """Supplier, number, date, total, currency, line descriptions (docs/06)."""
     parts = [
         inv.supplier_name or "",
         inv.invoice_number or "",
@@ -48,82 +52,89 @@ def _invoice_summary_text(inv: Invoice) -> str:
     return " | ".join(p for p in parts if p)
 
 
+def summary_chunk(inv: Invoice) -> Chunk | None:
+    text = invoice_summary_text(inv)
+    if not text:
+        return None
+    return Chunk(document_id=inv.document_id, invoice_id=inv.id, kind="invoice_summary",
+                 page_no=None, text=text, indexed=False)
+
+
+def _embed_chunks(chunks: list[Chunk], embedder: "Embedder", label: object) -> int:
+    """Embed chunks batch by batch; return how many were indexed."""
+    batch_size = get_config().INDEX_BATCH_SIZE
+    done = 0
+    for i in range(0, len(chunks), batch_size):
+        batch = chunks[i: i + batch_size]
+        try:
+            vectors = embedder.embed([c.text for c in batch], task_type="RETRIEVAL_DOCUMENT")
+        except Exception as exc:
+            # leave this batch indexed=False; embed_pending retries it later
+            log.warning("Embedding batch %d failed for %s: %s", i // batch_size, label, type(exc).__name__)
+            continue
+        for chunk, vec in zip(batch, vectors):
+            chunk.embedding = vec
+            chunk.indexed = True
+        done += len(batch)
+    return done
+
+
 def index_document(
     document_id: uuid.UUID,
     session: Session,
     embedder: "Embedder",
-) -> None:
-    """Build text chunks, embed them, and store in the chunks table.
+) -> int:
+    """Rebuild a document's chunks and embed them; return the number indexed.
 
-    On any embedding failure: logs the error, leaves chunks with indexed=False,
-    and does NOT change the document's status.
+    Idempotent: previous chunks are replaced.  Embedding failures are logged
+    and leave the affected chunks with indexed=False; nothing is raised.
     """
+    cfg = get_config()
     doc = session.get(Document, document_id)
     if doc is None:
         raise ValueError(f"Document {document_id} not found")
 
-    # Remove old chunks before re-indexing (idempotent)
     session.query(Chunk).filter_by(document_id=document_id).delete(synchronize_session=False)
     session.flush()
 
-    # Build page chunks
+    chunks: list[Chunk] = []
     pages = (
         session.query(DocumentPage)
         .filter_by(document_id=document_id)
         .order_by(DocumentPage.page_no)
         .all()
     )
-    page_chunks: list[Chunk] = []
     for page in pages:
-        if not page.text:
-            continue
-        for part in _chunk_text(page.text):
-            page_chunks.append(Chunk(
-                document_id=document_id,
-                invoice_id=None,
-                kind="page",
-                page_no=page.page_no,
-                text=part,
-                indexed=False,
-            ))
+        for part in _chunk_text(page.text or "", cfg.CHUNK_CHARS, cfg.CHUNK_OVERLAP):
+            chunks.append(Chunk(document_id=document_id, invoice_id=None, kind="page",
+                                page_no=page.page_no, text=part, indexed=False))
 
-    # Build invoice summary chunks
-    invoices = session.query(Invoice).filter_by(document_id=document_id).all()
-    summary_chunks: list[Chunk] = []
-    for inv in invoices:
-        summary_text = _invoice_summary_text(inv)
-        if summary_text:
-            summary_chunks.append(Chunk(
-                document_id=document_id,
-                invoice_id=inv.id,
-                kind="invoice_summary",
-                page_no=None,
-                text=summary_text,
-                indexed=False,
-            ))
+    for inv in session.query(Invoice).filter_by(document_id=document_id).all():
+        chunk = summary_chunk(inv)
+        if chunk is not None:
+            chunks.append(chunk)
 
-    all_chunks = page_chunks + summary_chunks
-    if not all_chunks:
-        return
-
-    # Add all chunks to session (get ids via flush)
-    for chunk in all_chunks:
-        session.add(chunk)
+    if not chunks:
+        return 0
+    session.add_all(chunks)
     session.flush()
 
-    # Embed in batches of 32
-    texts = [c.text for c in all_chunks]
-    try:
-        vectors = embedder.embed(texts, task_type="RETRIEVAL_DOCUMENT")
-        for chunk, vec in zip(all_chunks, vectors):
-            chunk.embedding = vec
-            chunk.indexed = True
-    except Exception as exc:
-        # Embedding failed: leave indexed=False, don't change document status
-        import logging
-        logging.getLogger(__name__).warning(
-            "Embedding failed for document %s: %s", document_id, exc
-        )
-        # chunks remain with indexed=False
-
+    done = _embed_chunks(chunks, embedder, document_id)
     session.flush()
+    return done
+
+
+def embed_pending(session: Session, embedder: "Embedder", limit: int = 1000) -> int:
+    """Embed up to `limit` chunks still marked indexed=False; return how many succeeded."""
+    pending = (
+        session.query(Chunk)
+        .filter(Chunk.indexed.is_(False))
+        .order_by(Chunk.document_id, Chunk.page_no)
+        .limit(limit)
+        .all()
+    )
+    if not pending:
+        return 0
+    done = _embed_chunks(pending, embedder, "pending chunks")
+    session.flush()
+    return done

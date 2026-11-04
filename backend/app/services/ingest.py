@@ -1,34 +1,49 @@
 """Ingest service: validate, deduplicate, and store uploaded files.
 
-save_upload() reuses the pipeline's intake magic-byte detection so the
-allow-list is never duplicated.  The user-supplied filename is sanitised
-before use as a display label; the file on disk is stored under its sha256
-hash (no user path component ever reaches the filesystem).
+save_upload() streams the upload to a temp file while hashing it, so the size
+cap is enforced without holding the whole file in memory.  It reuses the
+pipeline's intake allow-lists (extension + magic bytes) so they are never
+duplicated.  The user-supplied filename is sanitised and used only as a
+display label; the file on disk is stored under its sha256 hash.
 """
 from __future__ import annotations
 
 import hashlib
+import io
 import os
 import re
 import unicodedata
+import uuid
 from dataclasses import dataclass
 from pathlib import Path
+from typing import BinaryIO
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db.models import Document
 from app.pipeline.config import get_config
-from app.pipeline.nodes.intake import _detect_type  # reuse magic-byte allow-list
+from app.pipeline.nodes.intake import _IMAGE_EXT, _SHEET_EXT, _detect_type  # reuse allow-lists
+from app.services.errors import IngestError
+
+__all__ = ["IngestError", "IngestResult", "save_upload", "upload_dir"]
+
+_DEFAULT_UPLOAD_DIR = Path(__file__).resolve().parents[2] / "data" / "uploads"
+_ALLOWED_EXT = {".pdf"} | _IMAGE_EXT | _SHEET_EXT
+_READ_CHUNK = 1024 * 1024
 
 
-_UPLOAD_DIR = Path(__file__).resolve().parents[2] / "data" / "uploads"
+def upload_dir() -> Path:
+    """Directory holding uploads as <sha256> files (UPLOAD_DIR env overrides)."""
+    configured = get_config().UPLOAD_DIR
+    return Path(configured) if configured else _DEFAULT_UPLOAD_DIR
 
 
 def _sanitise_filename(name: str) -> str:
     """Strip unsafe characters; keep extension; cap length at 200 chars."""
     # Normalise unicode, replace path separators and control chars
     name = unicodedata.normalize("NFKC", name)
-    name = re.sub(r'[\\/:*?"<>|\x00-\x1f]', "_", name)
+    name = re.sub(r'[\\/:*?"<>|\x00-\x1f\x7f]', "_", name)
     name = name.strip(". ")
     return name[:200] or "upload"
 
@@ -39,67 +54,89 @@ class IngestResult:
     cached: bool  # True when the hash already existed
 
 
-class IngestError(Exception):
-    """Raised for files that fail magic-byte or size checks."""
-    def __init__(self, message: str, code: str) -> None:
-        super().__init__(message)
-        self.code = code
+def _find_by_hash(session: Session, file_hash: str) -> Document | None:
+    return session.query(Document).filter_by(file_hash=file_hash).first()
 
 
-def save_upload(filename: str, data: bytes, session: Session) -> IngestResult:
+def _spool(stream: BinaryIO, tmp_path: Path, max_bytes: int) -> tuple[str, int, bytes]:
+    """Copy stream to tmp_path in chunks; return (sha256, size, first 8 KB)."""
+    digest = hashlib.sha256()
+    size = 0
+    head = b""
+    with open(tmp_path, "wb") as out:
+        while True:
+            chunk = stream.read(_READ_CHUNK)
+            if not chunk:
+                break
+            size += len(chunk)
+            if size > max_bytes:
+                raise IngestError(
+                    f"File exceeds {max_bytes // (1024 * 1024)} MB limit", "TOO_LARGE"
+                )
+            if len(head) < 8192:
+                head += chunk[: 8192 - len(head)]
+            digest.update(chunk)
+            out.write(chunk)
+    return digest.hexdigest(), size, head
+
+
+def save_upload(filename: str, data: BinaryIO | bytes, session: Session) -> IngestResult:
     """Validate, hash, and persist an uploaded file.
 
-    Returns the Document row (existing or new) plus a `cached` flag.
-    Raises IngestError for oversized or unsupported files.
-    No LLM or pipeline call is made here.
+    Returns the Document row (existing or new) plus a `cached` flag.  The new
+    row is flushed, not committed: the caller commits and only then enqueues.
+    Raises IngestError for empty, oversized or unsupported files.
     """
     cfg = get_config()
+    stream: BinaryIO = io.BytesIO(data) if isinstance(data, (bytes, bytearray)) else data
 
-    # --- size check (streaming-friendly: data is already in memory here,
-    #     but the check happens before any disk write)
-    max_bytes = cfg.MAX_FILE_MB * 1024 * 1024
-    if len(data) == 0:
-        raise IngestError("File is empty", "EMPTY_FILE")
-    if len(data) > max_bytes:
-        raise IngestError(
-            f"File size {len(data)} bytes exceeds {cfg.MAX_FILE_MB} MB limit",
-            "TOO_LARGE",
-        )
-
-    # --- magic-byte check (reuses intake's allow-list)
-    header = data[:16]
-    first8k = data[:8192]
     ext = Path(filename).suffix.lower()
-    detected = _detect_type(header, first8k, ext)
-    if detected is None:
-        raise IngestError(
-            f"Unsupported file type (ext={ext!r}, magic={header[:4]!r})",
-            "UNSUPPORTED_TYPE",
-        )
+    if ext not in _ALLOWED_EXT:
+        raise IngestError(f"Unsupported file extension {ext!r}", "UNSUPPORTED_TYPE")
 
-    # --- hash
-    file_hash = hashlib.sha256(data).hexdigest()
+    root = upload_dir()
+    tmp_dir = root / "tmp"
+    tmp_dir.mkdir(parents=True, exist_ok=True)
+    tmp_path = tmp_dir / uuid.uuid4().hex
+    try:
+        file_hash, size, head = _spool(stream, tmp_path, cfg.MAX_FILE_MB * 1024 * 1024)
+        if size == 0:
+            raise IngestError("File is empty", "EMPTY_FILE")
 
-    # --- deduplication: return existing document if hash already stored
-    existing = session.query(Document).filter_by(file_hash=file_hash).first()
-    if existing is not None:
-        return IngestResult(document=existing, cached=True)
+        # magic bytes decide the type; a family mismatch (PDF named .jpg) is
+        # accepted here and surfaced as a warning by the intake node
+        detected = _detect_type(head[:16], head, ext)
+        if detected is None:
+            raise IngestError(
+                f"File content does not match an allowed type (ext={ext!r})", "UNSUPPORTED_TYPE"
+            )
 
-    # --- persist file under hash (user filename never used in path)
-    _UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-    dest = _UPLOAD_DIR / file_hash
-    dest.write_bytes(data)
+        existing = _find_by_hash(session, file_hash)
+        if existing is not None:
+            return IngestResult(document=existing, cached=True)
 
-    # --- insert document row
-    display_name = _sanitise_filename(filename)
+        dest = root / file_hash
+        if not dest.exists():
+            os.replace(tmp_path, dest)
+    finally:
+        tmp_path.unlink(missing_ok=True)
+
     doc = Document(
-        filename=display_name,
+        filename=_sanitise_filename(filename),
         file_hash=file_hash,
         file_type=detected if detected not in ("zip_maybe", "ole_maybe") else "sheet",
-        size_bytes=len(data),
+        size_bytes=size,
         status="queued",
     )
-    session.add(doc)
-    session.flush()  # assign id without committing
+    try:
+        # savepoint: a concurrent upload of the same file may win the unique index
+        with session.begin_nested():
+            session.add(doc)
+            session.flush()
+    except IntegrityError:
+        winner = _find_by_hash(session, file_hash)
+        if winner is None:
+            raise
+        return IngestResult(document=winner, cached=True)
 
     return IngestResult(document=doc, cached=False)

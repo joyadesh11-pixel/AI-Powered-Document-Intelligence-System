@@ -1,16 +1,19 @@
-"""Embedder protocol, fake implementation for tests, and Gemini implementation.
+"""Embedder protocol and the Gemini implementation.
 
-EMBED_MODEL and EMBED_DIM come exclusively from config — never hardcoded here.
-GeminiEmbedder uses the same langchain-google-genai SDK installed for the LLM.
-FakeEmbedder produces deterministic, text-dependent vectors suitable for ranking tests.
+EMBED_MODEL and EMBED_DIM come exclusively from config, never hardcoded here.
+GeminiEmbedder uses the same langchain-google-genai SDK installed for the LLM
+and the same error classification as pipeline/llm/client.py.
+Batching is the caller's job (services/indexing.py, INDEX_BATCH_SIZE).
+The deterministic test double lives in tests/fakes.py (FakeEmbedder).
 """
 from __future__ import annotations
 
-import hashlib
-import math
-from typing import Protocol, runtime_checkable
+import threading
+import time
+from typing import Any, Protocol, runtime_checkable
 
 from app.pipeline.config import get_config
+from app.pipeline.llm.client import _is_config_error, _is_transient
 
 
 @runtime_checkable
@@ -19,58 +22,42 @@ class Embedder(Protocol):
         ...
 
 
-class FakeEmbedder:
-    """Deterministic bag-of-words embedder for tests.
-
-    Texts that share words produce higher cosine similarity — so a query for
-    "Acme invoice" ranks an "Acme Corp Invoice #123" chunk above "Foo Bar Widget".
-    """
-
-    DIM = 768
-
-    def embed(self, texts: list[str], *, task_type: str = "RETRIEVAL_DOCUMENT") -> list[list[float]]:
-        results = []
-        for text in texts:
-            vec = [0.0] * self.DIM
-            for word in text.lower().split():
-                h = hashlib.sha256(word.encode()).digest()
-                for i in range(0, 32, 4):
-                    idx = int.from_bytes(h[i:i + 4], "little") % self.DIM
-                    vec[idx] += 1.0
-            magnitude = math.sqrt(sum(x * x for x in vec)) or 1.0
-            results.append([x / magnitude for x in vec])
-        return results
-
-
 class GeminiEmbedder:
-    """Gemini embedding via langchain-google-genai.
+    """Gemini embeddings via langchain-google-genai.
 
-    Batches inputs in groups of 32 (API limit).
-    Retries once on transient errors (429 / 5xx) before propagating.
+    One client per task type, created lazily and reused.  Transient errors
+    (429 per-minute, 5xx, timeouts) are retried with backoff; config errors
+    and anything else propagate immediately.
     """
+
+    _BACKOFF_S = (1.0, 2.0, 4.0)
 
     def __init__(self, model: str | None = None, dim: int | None = None) -> None:
         cfg = get_config()
         self._model = model or cfg.EMBED_MODEL
         self._dim = dim or cfg.EMBED_DIM
+        self._clients: dict[str, Any] = {}
+        self._lock = threading.Lock()
+
+    def _client(self, task_type: str) -> Any:
+        with self._lock:
+            if task_type not in self._clients:
+                from langchain_google_genai import GoogleGenerativeAIEmbeddings
+
+                self._clients[task_type] = GoogleGenerativeAIEmbeddings(
+                    model=self._model,
+                    task_type=task_type,
+                    output_dimensionality=self._dim,
+                )
+            return self._clients[task_type]
 
     def embed(self, texts: list[str], *, task_type: str = "RETRIEVAL_DOCUMENT") -> list[list[float]]:
-        from langchain_google_genai import GoogleGenerativeAIEmbeddings
-
-        embeddings_client = GoogleGenerativeAIEmbeddings(
-            model=self._model,
-            task_type=task_type,
-            output_dimensionality=self._dim,
-        )
-
-        results: list[list[float]] = []
-        batch_size = 32
-        for i in range(0, len(texts), batch_size):
-            batch = texts[i: i + batch_size]
+        client = self._client(task_type)
+        for attempt in range(len(self._BACKOFF_S) + 1):
             try:
-                vecs = embeddings_client.embed_documents(batch)
-            except Exception:
-                # One retry on transient errors
-                vecs = embeddings_client.embed_documents(batch)
-            results.extend(vecs)
-        return results
+                return client.embed_documents(texts)
+            except Exception as exc:
+                if _is_config_error(exc) or not _is_transient(exc) or attempt == len(self._BACKOFF_S):
+                    raise
+                time.sleep(self._BACKOFF_S[attempt])
+        raise AssertionError("unreachable")

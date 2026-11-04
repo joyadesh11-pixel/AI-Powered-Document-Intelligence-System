@@ -86,3 +86,75 @@ def test_filename_sanitised(session):
     session.commit()
     assert "/" not in result.document.filename
     assert "\\" not in result.document.filename
+
+
+# --- M8b ---------------------------------------------------------------------
+
+def test_stream_input_stored_under_hash(session, upload_dir):
+    import hashlib
+
+    data = _make_pdf_bytes("Invoice #stream")
+    result = save_upload("s.pdf", io.BytesIO(data), session)
+    session.commit()
+
+    digest = hashlib.sha256(data).hexdigest()
+    assert result.document.file_hash == digest
+    assert (upload_dir / digest).read_bytes() == data
+    # nothing left behind in the temp area
+    assert not any((upload_dir / "tmp").iterdir())
+
+
+def test_stream_over_cap_rejected_and_leaves_no_file(session, upload_dir, monkeypatch):
+    monkeypatch.setenv("MAX_FILE_MB", "1")
+    stream = io.BytesIO(b"%PDF-1.4\n" + b"x" * (2 * 1024 * 1024))
+    with pytest.raises(IngestError) as exc_info:
+        save_upload("big.pdf", stream, session)
+    assert exc_info.value.code == "TOO_LARGE"
+    assert [p for p in upload_dir.rglob("*") if p.is_file()] == []
+    assert session.query(Document).count() == 0
+
+
+def test_disallowed_extension_rejected_even_with_valid_magic(session):
+    with pytest.raises(IngestError) as exc_info:
+        save_upload("invoice.exe", _make_pdf_bytes(), session)
+    assert exc_info.value.code == "UNSUPPORTED_TYPE"
+
+
+def test_renamed_exe_rejected(session, upload_dir):
+    with pytest.raises(IngestError) as exc_info:
+        save_upload("invoice.pdf", b"MZ\x90\x00" + b"\x00" * 200, session)
+    assert exc_info.value.code == "UNSUPPORTED_TYPE"
+    assert [p for p in upload_dir.rglob("*") if p.is_file()] == []
+
+
+def test_docx_rejected_by_extension(session):
+    # A .docx is a zip container like .xlsx; the extension allow-list rejects it.
+    with pytest.raises(IngestError) as exc_info:
+        save_upload("letter.docx", b"PK\x03\x04" + b"\x00" * 200, session)
+    assert exc_info.value.code == "UNSUPPORTED_TYPE"
+
+
+def test_same_hash_race_returns_cached(session, session_factory, monkeypatch):
+    """Two uploads of one file pass the existence check at once: the loser gets cached=True."""
+    from app.services import ingest
+
+    data = _make_pdf_bytes("Invoice #race")
+    with session_factory() as other:
+        winner = save_upload("a.pdf", data, other)
+        other.commit()
+        winner_id = winner.document.id
+
+    real_find = ingest._find_by_hash
+    calls = {"n": 0}
+
+    def find_misses_once(s, h):
+        calls["n"] += 1
+        return None if calls["n"] == 1 else real_find(s, h)
+
+    monkeypatch.setattr(ingest, "_find_by_hash", find_misses_once)
+    result = save_upload("b.pdf", data, session)
+    session.commit()
+
+    assert result.cached is True
+    assert result.document.id == winner_id
+    assert session.query(Document).count() == 1

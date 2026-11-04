@@ -116,7 +116,7 @@ def test_keyword_search_finds_by_supplier(session, fake_embedder):
         mode="keyword",
         session=session,
         limit=10,
-    )
+    ).items
     assert len(results) > 0
     supplier_names = [r.supplier_name for r in results if r.supplier_name]
     assert any("ZapCorp" in (n or "") for n in supplier_names)
@@ -134,7 +134,7 @@ def test_semantic_search_ranks_relevant_higher(session, fake_embedder):
         session=session,
         embedder=fake_embedder,
         limit=10,
-    )
+    ).items
     assert len(results) > 0
     # The first result should be the Acme document
     first = results[0]
@@ -151,7 +151,7 @@ def test_hybrid_search_returns_results(session, fake_embedder):
         session=session,
         embedder=fake_embedder,
         limit=10,
-    )
+    ).items
     assert len(results) > 0
 
 
@@ -173,7 +173,7 @@ def test_search_filter_by_status(session, fake_embedder):
         session=session,
         status="needs_review",
         limit=10,
-    )
+    ).items
     # validated_ok invoice should not appear in needs_review filter
     for r in results:
         if r.invoice_id == inv.id:

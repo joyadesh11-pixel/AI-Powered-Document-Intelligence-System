@@ -101,3 +101,103 @@ def gt(fixture_dir: Path) -> dict[str, dict]:
     with open(fixture_dir / "ground_truth.json") as f:
         entries = json.load(f)
     return {e["file"]: e for e in entries}
+
+
+# ---------------------------------------------------------------------------
+# DB-backed fixtures (tests/services, tests/api, tests/workers).
+# Real Postgres+pgvector from docker compose; everything skips cleanly if it
+# is unreachable. Override the URL with DATABASE_URL_TEST.
+# ---------------------------------------------------------------------------
+
+import os
+
+from sqlalchemy import create_engine, text
+from sqlalchemy.orm import sessionmaker
+
+_DEFAULT_TEST_DB = "postgresql+psycopg2://dociq:dociq@127.0.0.1:5433/dociq_test"
+_TEST_DB_URL = os.environ.get("DATABASE_URL_TEST", _DEFAULT_TEST_DB)
+
+_TABLES_TO_TRUNCATE = [
+    "corrections",
+    "processing_events",
+    "chunks",
+    "validation_issues",
+    "line_items",
+    "invoices",
+    "document_pages",
+    "sheet_mapping_cache",
+    "documents",
+]
+
+
+@pytest.fixture(scope="session")
+def db_engine():
+    from app.db.base import create_all
+
+    try:
+        engine = create_engine(_TEST_DB_URL, connect_args={"connect_timeout": 2})
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+    except Exception as exc:
+        pytest.skip(f"Postgres not reachable ({exc}) — DB tests skipped")
+    create_all(engine)
+    yield engine
+    # Do NOT drop_all (the test DB may be shared / reused)
+    engine.dispose()
+
+
+@pytest.fixture
+def truncate_tables(db_engine):
+    """Truncate all tables so the test starts clean."""
+    with db_engine.connect() as conn:
+        conn.execute(text("TRUNCATE " + ", ".join(_TABLES_TO_TRUNCATE) + " CASCADE"))
+        conn.commit()
+    yield
+
+
+@pytest.fixture
+def session_factory(db_engine):
+    """Point services.session at the test DB (API and eager tasks open their own sessions)."""
+    from app.services import session as session_mod
+
+    factory = sessionmaker(bind=db_engine, autoflush=False, expire_on_commit=False)
+    previous = session_mod.set_session_factory(factory)
+    yield factory
+    session_mod.set_session_factory(previous)
+
+
+@pytest.fixture
+def session(session_factory):
+    with session_factory() as s:
+        yield s
+        s.rollback()
+
+
+@pytest.fixture
+def upload_dir(tmp_path, monkeypatch):
+    """Store uploads under tmp_path, never in the real backend/data/uploads."""
+    d = tmp_path / "uploads"
+    monkeypatch.setenv("UPLOAD_DIR", str(d))
+    return d
+
+
+@pytest.fixture
+def fake_embedder():
+    from tests.fakes import FakeEmbedder
+
+    return FakeEmbedder()
+
+
+@pytest.fixture
+def fake_providers(monkeypatch, fake_embedder):
+    """Swap the LLM/embedder factories used by tasks and the API.
+
+    Returns a dict; tests put a FakeLLM in ["llm"] before triggering processing.
+    """
+    from app.services import providers
+    from tests.fakes import FakeLLM
+
+    holder: dict = {"llm": FakeLLM(responses=[]), "embedder": fake_embedder}
+    monkeypatch.setattr(providers, "get_llm", lambda: holder["llm"])
+    monkeypatch.setattr(providers, "get_embedder", lambda: holder["embedder"])
+    return holder

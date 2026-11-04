@@ -1,22 +1,26 @@
 """Corrections service: apply human patches, re-validate, recompute status.
 
-All patch values arrive as strings; unparseable values raise CorrectionParseError
-with the field name before any write (no partial write).
+All patch values arrive as strings.  Every value is parsed before any write;
+if any fails, CorrectionParseError carries a {field: message} map and nothing
+is written.
 
 After applying the patch:
-- Pure re-validation runs (no LLM) with corrected_fields set so grounding is
-  skipped for the changed fields.
-- invoice.corrected = True.
+- Pure re-validation runs (no LLM).  Grounding is skipped for every field a
+  human has ever corrected on this invoice, not just this patch's fields.
+- dup_key is recomputed from the corrected values; a collision is flagged.
+- invoice.corrected = True; one corrections row per field that changed.
 - Invoice and document statuses are recomputed (worst-of).
-- The invoice's summary chunk is marked indexed=False.
+- The invoice's summary chunk is rebuilt with indexed=False (re-embedded later).
 """
 from __future__ import annotations
 
+import re
 import uuid
 from datetime import date, datetime, timezone
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 from typing import Any
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db.models import Chunk, Correction, Document, DocumentPage, Invoice, LineItem, ValidationIssue
@@ -24,19 +28,143 @@ from app.pipeline.utils.dates import parse_date
 from app.pipeline.utils.money import parse_amount
 from app.pipeline.validation import ValidationCtx, run_all
 from app.pipeline.validation.duplicates import compute_dup_key
-from app.schemas.models import IssueCode, InvoiceStatus, Severity
-from app.services.utils import compute_document_status
+from app.schemas.models import DocStatus, IssueCode, InvoiceStatus, Severity
+from app.services.errors import Conflict, NotFound, ServiceError
+from app.services.indexing import summary_chunk
+from app.services.utils import worst_status
+
+_TEXT_FIELDS = ("invoice_number", "supplier_name", "customer_name")
+_MONEY_FIELDS = ("subtotal", "tax", "total")
+_DATE_FIELDS = ("invoice_date", "due_date")
+_HEADER_FIELDS = (*_TEXT_FIELDS, *_MONEY_FIELDS, *_DATE_FIELDS, "currency")
+_LINE_MONEY = ("quantity", "unit_price", "amount")
+_LINE_FIELDS = ("description", *_LINE_MONEY)
+_MAX_TEXT = 500
+_CURRENCY_RE = re.compile(r"^[A-Za-z]{3}$")
+_BUSY = (DocStatus.queued.value, DocStatus.processing.value)
 
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-class CorrectionParseError(Exception):
-    """Raised when a patch value cannot be parsed; carries the field name."""
-    def __init__(self, field: str, message: str) -> None:
-        super().__init__(f"{field}: {message}")
-        self.field = field
+class CorrectionParseError(ServiceError):
+    """One or more patch values could not be parsed; nothing was written."""
+    code = "VALIDATION_ERROR"
+
+    def __init__(self, errors: dict[str, str]) -> None:
+        super().__init__("; ".join(f"{k}: {v}" for k, v in errors.items()))
+        self.errors = errors
+        self.field = next(iter(errors))
+
+
+# ---------------------------------------------------------------------------
+# Parsing (no writes)
+# ---------------------------------------------------------------------------
+
+def _blank(v: Any) -> bool:
+    return v is None or (isinstance(v, str) and not v.strip())
+
+
+def _parse_value(name: str, raw: Any, errors: dict[str, str], key: str) -> Any:
+    """Parse one value; on failure record errors[key] and return None."""
+    if _blank(raw):
+        return None
+    s = str(raw).strip()
+    if name in _MONEY_FIELDS or name in _LINE_MONEY:
+        value = parse_amount(s)
+        if value is None:
+            errors[key] = f"Cannot parse number: {s[:50]!r}"
+        return value
+    if name in _DATE_FIELDS:
+        try:
+            parsed = parse_date(s)
+        except ValueError:
+            errors[key] = f"Cannot parse date: {s[:50]!r}"
+            return None
+        if parsed.ambiguous:
+            errors[key] = f"Ambiguous date {s[:50]!r}; use YYYY-MM-DD"
+            return None
+        return parsed.value
+    if name == "currency":
+        if not _CURRENCY_RE.match(s):
+            errors[key] = "Currency must be a 3-letter ISO code"
+            return None
+        return s.upper()
+    if len(s) > _MAX_TEXT:
+        errors[key] = f"Longer than {_MAX_TEXT} characters"
+        return None
+    return s
+
+
+def _parse_patch(patch: dict) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    errors: dict[str, str] = {}
+    header: dict[str, Any] = {}
+    lines: list[dict[str, Any]] = []
+
+    for key, raw in patch.items():
+        if key == "line_items":
+            continue
+        if key not in _HEADER_FIELDS:
+            errors[key] = "Unknown field"
+            continue
+        header[key] = _parse_value(key, raw, errors, key)
+
+    raw_lines = patch.get("line_items")
+    if raw_lines is not None:
+        if not isinstance(raw_lines, list):
+            errors["line_items"] = "Expected a list"
+        else:
+            seen: set[int] = set()
+            for i, li in enumerate(raw_lines):
+                pos = li.get("position") if isinstance(li, dict) else None
+                try:
+                    pos = int(pos)
+                except (TypeError, ValueError):
+                    errors[f"line_items[{i}].position"] = "Each line item needs an integer position"
+                    continue
+                if pos < 1 or pos in seen:
+                    errors[f"line_items[{i}].position"] = "Position must be >= 1 and unique"
+                    continue
+                seen.add(pos)
+                parsed: dict[str, Any] = {"position": pos}
+                for k, raw in li.items():
+                    if k == "position":
+                        continue
+                    if k not in _LINE_FIELDS:
+                        errors[f"line_items[{pos}].{k}"] = "Unknown field"
+                        continue
+                    parsed[k] = _parse_value(k, raw, errors, f"line_items[{pos}].{k}")
+                lines.append(parsed)
+
+    if errors:
+        raise CorrectionParseError(errors)
+    return header, lines
+
+
+# ---------------------------------------------------------------------------
+# Apply
+# ---------------------------------------------------------------------------
+
+def _as_date(v: Any) -> date | None:
+    """Columns can hold an ISO string until the session reloads; validation needs a date."""
+    if v is None or isinstance(v, date):
+        return v
+    return date.fromisoformat(str(v))
+
+
+_ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def _norm(v: Any) -> Any:
+    """Comparable form: stored ISO-date strings become dates; Decimals already compare by value."""
+    if isinstance(v, str) and _ISO_DATE_RE.match(v):
+        return date.fromisoformat(v)
+    return v
+
+
+def _text(v: Any) -> str | None:
+    return None if v is None else str(v)
 
 
 def apply(invoice_id: uuid.UUID, patch: dict, session: Session) -> Invoice:
@@ -45,187 +173,104 @@ def apply(invoice_id: uuid.UUID, patch: dict, session: Session) -> Invoice:
     patch keys: any subset of {invoice_number, invoice_date, due_date,
     supplier_name, customer_name, subtotal, tax, total, currency,
     line_items: [{position, description?, quantity?, unit_price?, amount?}]}.
+    Values are strings; "" or None clears a field.
 
-    All values are strings.  Raises CorrectionParseError on bad values.
-    Raises ValueError if the invoice is not found.
-    Returns the updated Invoice.
+    Raises CorrectionParseError (nothing written), NotFound, or Conflict while
+    the document is queued/processing.  The caller commits.
     """
-    inv = session.get(Invoice, invoice_id)
+    inv = session.get(Invoice, invoice_id, with_for_update=True)
     if inv is None:
-        raise ValueError(f"Invoice {invoice_id} not found")
+        raise NotFound(f"Invoice {invoice_id} not found")
     doc = session.get(Document, inv.document_id)
-    if doc is None:
-        raise ValueError(f"Document for invoice {invoice_id} not found")
+    if doc.status in _BUSY:
+        raise Conflict(f"Document is {doc.status}; corrections are allowed once processing finishes")
 
-    # --- parse all values before any write ---
-    parsed: dict[str, Any] = {}
-    corrected_field_names: set[str] = set()
+    header, line_patches = _parse_patch(patch)
 
-    _MONEY_FIELDS = {"subtotal", "tax", "total"}
-    _DATE_FIELDS = {"invoice_date", "due_date"}
-    _TEXT_FIELDS = {"invoice_number", "supplier_name", "customer_name", "currency"}
+    # --- writes: only fields whose value actually changes are logged
+    changes: list[tuple[str, Any, Any]] = []
+    for name, new in header.items():
+        old = getattr(inv, name)
+        if _norm(old) != _norm(new):
+            changes.append((name, old, new))
+            setattr(inv, name, new)
 
-    for field_name in _TEXT_FIELDS:
-        if field_name in patch:
-            val = patch[field_name]
-            parsed[field_name] = str(val).strip() if val not in (None, "") else None
-            corrected_field_names.add(field_name)
+    lines_by_pos = {li.position: li for li in inv.line_items}
+    for lp in line_patches:
+        pos = lp["position"]
+        li = lines_by_pos.get(pos)
+        if li is None:
+            li = LineItem(invoice_id=inv.id, position=pos)
+            inv.line_items.append(li)
+        for k, new in lp.items():
+            if k == "position":
+                continue
+            old = getattr(li, k)
+            if _norm(old) != _norm(new):
+                changes.append((f"line_items[{pos}].{k}", old, new))
+                setattr(li, k, new)
 
-    for field_name in _MONEY_FIELDS:
-        if field_name in patch:
-            raw_val = str(patch[field_name]).strip() if patch[field_name] not in (None, "") else None
-            if raw_val is None:
-                parsed[field_name] = None
-            else:
-                result = parse_amount(raw_val)
-                if result is None:
-                    raise CorrectionParseError(field_name, f"Cannot parse money value: {patch[field_name]!r}")
-                parsed[field_name] = result
-            corrected_field_names.add(field_name)
+    for field_name, old, new in changes:
+        session.add(Correction(invoice_id=inv.id, field=field_name,
+                               old_value=_text(old), new_value=_text(new), at=_now()))
+    session.flush()
 
-    for field_name in _DATE_FIELDS:
-        if field_name in patch:
-            raw_val = str(patch[field_name]).strip() if patch[field_name] not in (None, "") else None
-            if raw_val is None:
-                parsed[field_name] = None
-            else:
-                try:
-                    date_result = parse_date(raw_val)
-                    parsed[field_name] = date_result.value or None
-                except Exception:
-                    raise CorrectionParseError(field_name, f"Cannot parse date: {patch[field_name]!r}")
-            corrected_field_names.add(field_name)
+    # every field a human has ever corrected on this invoice skips grounding
+    ever = {r[0] for r in session.query(Correction.field).filter_by(invoice_id=inv.id)}
+    corrected_fields = frozenset(
+        "line_items" if f.startswith("line_items[") else f for f in ever
+    )
 
-    line_item_patches: list[dict] | None = None
-    if "line_items" in patch:
-        raw_lines = patch["line_items"]
-        if not isinstance(raw_lines, list):
-            raise CorrectionParseError("line_items", "Expected a list")
-        line_item_patches = []
-        for li_patch in raw_lines:
-            position = li_patch.get("position")
-            if position is None:
-                raise CorrectionParseError("line_items", "Each line item patch must have a position")
-            parsed_li: dict[str, Any] = {"position": int(position)}
-            for li_field in ("description",):
-                if li_field in li_patch:
-                    parsed_li[li_field] = li_patch[li_field]
-            for li_money in ("quantity", "unit_price", "amount"):
-                if li_money in li_patch:
-                    raw = str(li_patch[li_money]).strip() if li_patch[li_money] not in (None, "") else None
-                    if raw is None:
-                        parsed_li[li_money] = None
-                    else:
-                        result = parse_amount(raw)
-                        if result is None:
-                            raise CorrectionParseError(
-                                f"line_items[{position}].{li_money}",
-                                f"Cannot parse: {li_patch[li_money]!r}",
-                            )
-                        parsed_li[li_money] = result
-            line_item_patches.append(parsed_li)
-        corrected_field_names.add("line_items")
+    _recompute_dup_key(inv, session)
+    _revalidate(inv, doc, corrected_fields, session)
 
-    # --- all values parsed; now apply writes ---
-    old_values: dict[str, str | None] = {}
+    if changes:
+        inv.corrected = True
+    inv.updated_at = _now()
+    session.flush()
 
-    for field_name, new_val in parsed.items():
-        old_val = getattr(inv, field_name, None)
-        old_values[field_name] = str(old_val) if old_val is not None else None
-        setattr(inv, field_name, new_val)
+    _recompute_document_status(doc, session)
+    _rebuild_summary_chunk(inv, session)
+    session.flush()
+    return inv
 
-    # Apply line-item patches by position (replace matching lines)
-    if line_item_patches is not None:
-        existing_lines = {li.position: li for li in inv.line_items}
-        for li_patch in line_item_patches:
-            pos = li_patch["position"]
-            if pos in existing_lines:
-                li_db = existing_lines[pos]
-                for k, v in li_patch.items():
-                    if k != "position":
-                        if k in ("quantity", "unit_price", "amount") and v is not None:
-                            setattr(li_db, k, Decimal(str(v)))
-                        elif k in ("quantity", "unit_price", "amount"):
-                            setattr(li_db, k, None)
-                        else:
-                            setattr(li_db, k, v)
-            else:
-                # New line item
-                new_li = LineItem(
-                    invoice_id=inv.id,
-                    position=pos,
-                )
-                for k, v in li_patch.items():
-                    if k != "position":
-                        if k in ("quantity", "unit_price", "amount") and v is not None:
-                            setattr(new_li, k, Decimal(str(v)))
-                        elif k in ("quantity", "unit_price", "amount"):
-                            setattr(new_li, k, None)
-                        else:
-                            setattr(new_li, k, v)
-                session.add(new_li)
-        old_values["line_items"] = None  # log as a field change
 
-    # Log each changed field in corrections table
-    for field_name in corrected_field_names:
-        session.add(Correction(
-            invoice_id=inv.id,
-            field=field_name,
-            old_value=old_values.get(field_name),
-            new_value=str(parsed.get(field_name)) if parsed.get(field_name) is not None else None,
-            at=_now(),
-        ))
+def _recompute_dup_key(inv: Invoice, session: Session) -> None:
+    new_key = compute_dup_key(inv)
+    if new_key is None:
+        inv.dup_key, inv.dup_of = None, None
+        return
+    holder = session.query(Invoice).filter(Invoice.dup_key == new_key, Invoice.id != inv.id).first()
+    if holder is not None:
+        inv.dup_key, inv.dup_of = None, holder.id
+        return
+    inv.dup_key, inv.dup_of = new_key, None
+    try:
+        # savepoint: a concurrent write may take the key between check and flush
+        with session.begin_nested():
+            session.flush()
+    except IntegrityError:
+        holder = session.query(Invoice).filter(Invoice.dup_key == new_key, Invoice.id != inv.id).first()
+        inv.dup_key, inv.dup_of = None, holder.id if holder else None
 
-    session.flush()  # ensure line items are visible for re-validation
 
-    # --- recompute dup_key and handle conflicts ---
-    new_dup_key = compute_dup_key(inv)
-    if new_dup_key != inv.dup_key:
-        if new_dup_key is not None:
-            existing = session.query(Invoice).filter(
-                Invoice.dup_key == new_dup_key,
-                Invoice.id != inv.id,
-            ).first()
-            if existing:
-                # Correction creates a duplicate — set dup issue, dup_key=NULL, dup_of
-                inv.dup_key = None
-                inv.dup_of = existing.id
-                # Ensure DUPLICATE_INVOICE issue is present
-                has_dup = session.query(ValidationIssue).filter_by(
-                    invoice_id=inv.id, code=IssueCode.DUPLICATE_INVOICE.value
-                ).first()
-                if not has_dup:
-                    session.add(ValidationIssue(
-                        document_id=inv.document_id,
-                        invoice_id=inv.id,
-                        code=IssueCode.DUPLICATE_INVOICE.value,
-                        severity=Severity.error.value,
-                        message="Corrected invoice is a duplicate of an existing invoice",
-                    ))
-            else:
-                inv.dup_key = new_dup_key
-                inv.dup_of = None
-        else:
-            inv.dup_key = None
-
-    # --- re-run pure validation (no LLM) ---
-    source_text = _get_source_text(doc.id, session)
-    # Build a dict view for run_all (it works with dicts via _get())
-    invoice_view = _invoice_to_dict(inv, session)
-
+def _revalidate(inv: Invoice, doc: Document, corrected_fields: frozenset[str], session: Session) -> None:
+    """Replace this invoice's issues with a fresh pure-validation run."""
     ctx = ValidationCtx(
         tier=inv.tier or "parser",
         file_type=doc.file_type or "pdf",
         file_hash=doc.file_hash,
-        source_text=source_text,
-        seen_store=None,   # dup already handled above
+        source_text=_get_source_text(doc.id, session),
+        seen_store=None,   # duplicates handled by _recompute_dup_key
         seen_in_file={},
         day_first=None,
-        corrected_fields=frozenset(corrected_field_names),
+        corrected_fields=corrected_fields,
     )
-    new_issues = run_all(invoice_view, ctx)
+    view = _invoice_to_dict(inv)
+    # a human-confirmed value is no longer "uncertain"
+    view["uncertain_fields"] = [f for f in view["uncertain_fields"] if f not in corrected_fields]
+    new_issues = run_all(view, ctx)
 
-    # Replace this invoice's issues
     session.query(ValidationIssue).filter_by(invoice_id=inv.id).delete(synchronize_session=False)
     for issue in new_issues:
         session.add(ValidationIssue(
@@ -239,48 +284,39 @@ def apply(invoice_id: uuid.UUID, patch: dict, session: Session) -> Invoice:
             message=issue.message,
             location=issue.location or {},
         ))
-
-    # Preserve any dup issue we set above
-    if inv.dup_of is not None:
-        has_dup = any(
-            (i.code.value if hasattr(i.code, "value") else str(i.code)) == IssueCode.DUPLICATE_INVOICE.value
-            for i in new_issues
-        )
-        if not has_dup:
-            session.add(ValidationIssue(
-                document_id=inv.document_id,
-                invoice_id=inv.id,
-                code=IssueCode.DUPLICATE_INVOICE.value,
-                severity=Severity.error.value,
-                message="Invoice is a duplicate of an existing invoice",
-            ))
-
-    session.flush()
-
-    # Recompute invoice status
-    has_error = session.query(ValidationIssue).filter_by(
-        invoice_id=inv.id, severity=Severity.error.value
-    ).first() is not None
-    inv.status = (
-        InvoiceStatus.needs_review.value if has_error else InvoiceStatus.validated_ok.value
+    has_error = any(
+        (i.severity.value if hasattr(i.severity, "value") else str(i.severity)) == Severity.error.value
+        for i in new_issues
     )
-    inv.corrected = True
-    inv.updated_at = _now()
+    if inv.dup_of is not None:
+        session.add(ValidationIssue(
+            document_id=inv.document_id,
+            invoice_id=inv.id,
+            code=IssueCode.DUPLICATE_INVOICE.value,
+            severity=Severity.error.value,
+            field="invoice_number",
+            message="Invoice is a duplicate of an existing invoice",
+            location={},
+        ))
+        has_error = True
+    inv.status = InvoiceStatus.needs_review.value if has_error else InvoiceStatus.validated_ok.value
 
-    # Recompute document status
-    all_statuses = [
-        r[0] for r in session.query(Invoice.status).filter_by(document_id=inv.document_id).all()
-    ]
-    doc.status = compute_document_status(all_statuses)
+
+def _recompute_document_status(doc: Document, session: Session) -> None:
+    """Worst of its invoices (docs/06).  Document-level pipeline notes such as
+    VISION_FAILED describe the run, not the data, so they do not block it."""
+    statuses = [r[0] for r in session.query(Invoice.status).filter_by(document_id=doc.id)]
+    doc.status = worst_status(statuses) if statuses else DocStatus.needs_review.value
     doc.updated_at = _now()
 
-    # Mark invoice summary chunk for re-embedding
-    session.query(Chunk).filter_by(
-        invoice_id=inv.id, kind="invoice_summary"
-    ).update({"indexed": False}, synchronize_session="fetch")
 
-    session.flush()
-    return inv
+def _rebuild_summary_chunk(inv: Invoice, session: Session) -> None:
+    session.query(Chunk).filter_by(invoice_id=inv.id, kind="invoice_summary").delete(
+        synchronize_session=False
+    )
+    chunk = summary_chunk(inv)
+    if chunk is not None:
+        session.add(chunk)
 
 
 def _get_source_text(document_id: uuid.UUID, session: Session) -> str:
@@ -293,24 +329,21 @@ def _get_source_text(document_id: uuid.UUID, session: Session) -> str:
     return "\n".join(p.text or "" for p in pages)
 
 
-def _as_date(v: Any) -> date | None:
-    """Columns can hold an ISO string until the session reloads; validation needs a date."""
-    if v is None or isinstance(v, date):
-        return v
-    return date.fromisoformat(str(v))
+def _dec(v: Any) -> Decimal | None:
+    return Decimal(str(v)) if v is not None else None
 
 
-def _invoice_to_dict(inv: Invoice, session: Session) -> dict:
+def _invoice_to_dict(inv: Invoice) -> dict:
     """Build a dict view of the invoice that run_all() can work with."""
     lines = [
         {
             "position": li.position,
             "description": li.description,
-            "quantity": Decimal(str(li.quantity)) if li.quantity is not None else None,
-            "unit_price": Decimal(str(li.unit_price)) if li.unit_price is not None else None,
-            "amount": Decimal(str(li.amount)) if li.amount is not None else None,
+            "quantity": _dec(li.quantity),
+            "unit_price": _dec(li.unit_price),
+            "amount": _dec(li.amount),
         }
-        for li in inv.line_items
+        for li in sorted(inv.line_items, key=lambda li: li.position)
     ]
     return {
         "unit_id": inv.unit_index,
@@ -319,9 +352,9 @@ def _invoice_to_dict(inv: Invoice, session: Session) -> dict:
         "due_date": _as_date(inv.due_date),
         "supplier_name": inv.supplier_name,
         "customer_name": inv.customer_name,
-        "subtotal": Decimal(str(inv.subtotal)) if inv.subtotal is not None else None,
-        "tax": Decimal(str(inv.tax)) if inv.tax is not None else None,
-        "total": Decimal(str(inv.total)) if inv.total is not None else None,
+        "subtotal": _dec(inv.subtotal),
+        "tax": _dec(inv.tax),
+        "total": _dec(inv.total),
         "currency": inv.currency,
         "line_items": lines,
         "uncertain_fields": inv.uncertain_fields or [],

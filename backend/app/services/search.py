@@ -1,52 +1,76 @@
 """Search service: keyword, semantic, and hybrid (RRF) search over chunks.
 
-Keyword mode: plainto_tsquery on chunks.tsv + ILIKE on invoice fields.
-Semantic mode: embed query, find nearest neighbours by cosine distance.
-Hybrid mode: Reciprocal Rank Fusion (k=60) of both result lists.
+Keyword:  plainto_tsquery('simple') on chunks.tsv, plus ILIKE on invoice
+          number / supplier (escaped, so % and _ in the query are literal).
+Semantic: embed the query (RETRIEVAL_QUERY), cosine distance via pgvector,
+          only chunks with indexed=true.
+Hybrid:   Reciprocal Rank Fusion (k=60).  Each list is first grouped by result
+          key (invoice for summary chunks, document for page chunks) so a key
+          found by both lists is fused into one result with matched_by="both".
+          If the query cannot be embedded, hybrid degrades to keyword.
 
-Filters (status, supplier, currency, date_from/to, min/max_total) apply to invoices.
-For page chunks (no invoice_id), filters are skipped unless they would exclude
-the chunk's parent document — this is implemented via a LEFT JOIN.
-Results are grouped by invoice_id (or document_id for page-only hits) so one
-document never floods the result list.
+Invoice filters (supplier, status, currency, dates, totals) apply to the
+chunk's invoice; a page chunk passes only if its document has an invoice that
+matches.  All SQL is built from SQLAlchemy expressions with bound parameters.
 """
 from __future__ import annotations
 
-import re
+import logging
 from dataclasses import dataclass, field
+from datetime import date
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import func, text
-from sqlalchemy.orm import Session
+from sqlalchemy import and_, case, exists, func, literal_column, or_, select, true
+from sqlalchemy.orm import Session, aliased
 
 from app.db.models import Chunk, Document, Invoice
+from app.services.errors import ServiceError
 
 if TYPE_CHECKING:
     from app.services.embedder import Embedder
 
+log = logging.getLogger(__name__)
+
 _RRF_K = 60
-_KEYWORD_LIMIT = 50
+_KEYWORD_POOL = 200
 _SEMANTIC_LIMIT = 50
+_HEADLINE_OPTS = "MaxWords=20,MinWords=5,ShortWord=3,MaxFragments=1"
+# a constant regconfig, never user input
+_SIMPLE = literal_column("'simple'::regconfig")
 
 
-def _escape_ilike(s: str) -> str:
-    """Escape % and _ in ILIKE patterns (PostgreSQL uses \\ as escape)."""
-    return s.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+class EmbeddingUnavailable(ServiceError):
+    code = "EMBEDDING_UNAVAILABLE"
 
 
 @dataclass
 class SearchResult:
     document_id: Any
     invoice_id: Any | None
+    kind: str                      # 'invoice_summary' | 'page'
+    filename: str | None
     supplier_name: str | None
     invoice_number: str | None
     invoice_date: str | None
-    total: Any | None
-    status: str | None
+    total: Decimal | None
+    currency: str | None
+    status: str | None             # invoice status, or document status for page hits
     snippet: str | None
     score: float
-    matched_by: str  # 'keyword' | 'semantic' | 'hybrid'
+    matched_by: str                # 'keyword' | 'semantic' | 'both'
+
+
+@dataclass
+class SearchPage:
+    items: list[SearchResult] = field(default_factory=list)
+    total: int = 0
+    degraded: bool = False         # hybrid fell back to keyword (embedding unavailable)
+
+
+def escape_like(s: str) -> str:
+    """Escape LIKE metacharacters; pair with escape='\\\\'."""
+    return s.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 
 def query(
@@ -58,312 +82,183 @@ def query(
     supplier: str | None = None,
     status: str | None = None,
     currency: str | None = None,
-    date_from: str | None = None,
-    date_to: str | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
     min_total: Decimal | None = None,
     max_total: Decimal | None = None,
     limit: int = 20,
     offset: int = 0,
-) -> list[SearchResult]:
+) -> SearchPage:
+    filters = dict(supplier=supplier, status=status, currency=currency, date_from=date_from,
+                   date_to=date_to, min_total=min_total, max_total=max_total)
+    flt = _filter_clause(filters)
+    degraded = False
+
     if mode == "keyword":
-        rows = _keyword_search(q, session, supplier=supplier, status=status, currency=currency,
-                               date_from=date_from, date_to=date_to,
-                               min_total=min_total, max_total=max_total, limit=_KEYWORD_LIMIT)
-        results = _rows_to_results(rows, "keyword")
+        ranked = _group(_keyword_rows(q, session, flt), "keyword")
     elif mode == "semantic":
-        if embedder is None:
-            raise ValueError("embedder required for semantic search")
-        results = _semantic_search(q, embedder, session, supplier=supplier, status=status,
-                                   currency=currency, date_from=date_from, date_to=date_to,
-                                   min_total=min_total, max_total=max_total, limit=_SEMANTIC_LIMIT)
+        ranked = _group(_semantic_rows(_embed_query(q, embedder), q, session, flt), "semantic")
     elif mode == "hybrid":
-        if embedder is None:
-            raise ValueError("embedder required for hybrid search")
-        kw_rows = _keyword_search(q, session, supplier=supplier, status=status, currency=currency,
-                                  date_from=date_from, date_to=date_to,
-                                  min_total=min_total, max_total=max_total, limit=_KEYWORD_LIMIT)
-        sem_results = _semantic_search(q, embedder, session, supplier=supplier, status=status,
-                                       currency=currency, date_from=date_from, date_to=date_to,
-                                       min_total=min_total, max_total=max_total, limit=_SEMANTIC_LIMIT)
-        results = _rrf_fusion(kw_rows, sem_results)
+        kw = _group(_keyword_rows(q, session, flt), "keyword")
+        try:
+            sem = _group(_semantic_rows(_embed_query(q, embedder), q, session, flt), "semantic")
+        except EmbeddingUnavailable:
+            ranked, degraded = kw, True
+        else:
+            ranked = _rrf(kw, sem)
     else:
         raise ValueError(f"Unknown search mode: {mode!r}")
 
-    # Deduplicate by invoice_id / document_id, keep highest score
-    seen: dict[str, SearchResult] = {}
-    for r in results:
-        key = str(r.invoice_id) if r.invoice_id else str(r.document_id)
-        if key not in seen or r.score > seen[key].score:
-            seen[key] = r
-
-    deduped = sorted(seen.values(), key=lambda r: r.score, reverse=True)
-    return deduped[offset: offset + limit]
+    return SearchPage(items=ranked[offset: offset + limit], total=len(ranked), degraded=degraded)
 
 
 # ---------------------------------------------------------------------------
-# Keyword search
+# Filters
 # ---------------------------------------------------------------------------
 
-def _keyword_search(
-    q: str,
-    session: Session,
-    **filters: Any,
-) -> list[dict]:
-    limit = filters.pop("limit", _KEYWORD_LIMIT)
-
-    # Build the raw SQL query for keyword search
-    # We use text() for the tsquery/ts_rank expressions
-    q_escaped = _escape_ilike(q)
-    q_like = f"%{q_escaped}%"
-
-    sql = text("""
-        SELECT
-            c.id          AS chunk_id,
-            c.document_id,
-            c.invoice_id,
-            c.kind,
-            c.text        AS chunk_text,
-            ts_rank(c.tsv, plainto_tsquery('simple', :q)) AS rank,
-            ts_headline(
-                'simple', c.text,
-                plainto_tsquery('simple', :q),
-                'MaxWords=20,MinWords=5,ShortWord=3,MaxFragments=1'
-            )             AS snippet,
-            i.supplier_name,
-            i.invoice_number,
-            i.invoice_date,
-            i.total,
-            i.status      AS inv_status,
-            i.currency
-        FROM chunks c
-        LEFT JOIN invoices i ON c.invoice_id = i.id
-        WHERE (
-            c.tsv @@ plainto_tsquery('simple', :q)
-            OR i.invoice_number ILIKE :q_like ESCAPE '\\'
-            OR i.supplier_name  ILIKE :q_like ESCAPE '\\'
-        )
-        {filter_clause}
-        ORDER BY rank DESC
-        LIMIT :lim
-    """)
-
-    filter_parts, params = _build_filter_sql(filters, table_prefix="i")
-    filter_clause = ("AND " + " AND ".join(filter_parts)) if filter_parts else ""
-
-    params.update({"q": q, "q_like": q_like, "lim": limit})
-    # Re-inject filter clause into sql
-    sql = text(sql.text.format(filter_clause=filter_clause))
-
-    rows = session.execute(sql, params).mappings().all()
-    return [dict(r) for r in rows]
-
-
-def _rows_to_results(rows: list[dict], matched_by: str) -> list[SearchResult]:
-    results = []
-    for r in rows:
-        results.append(SearchResult(
-            document_id=r["document_id"],
-            invoice_id=r.get("invoice_id"),
-            supplier_name=r.get("supplier_name"),
-            invoice_number=r.get("invoice_number"),
-            invoice_date=r.get("invoice_date"),
-            total=r.get("total"),
-            status=r.get("inv_status"),
-            snippet=r.get("snippet"),
-            score=float(r.get("rank") or 0.0),
-            matched_by=matched_by,
-        ))
-    return results
-
-
-# ---------------------------------------------------------------------------
-# Semantic search
-# ---------------------------------------------------------------------------
-
-def _semantic_search(
-    q: str,
-    embedder: "Embedder",
-    session: Session,
-    **filters: Any,
-) -> list[SearchResult]:
-    limit = filters.pop("limit", _SEMANTIC_LIMIT)
-
-    q_vec = embedder.embed([q], task_type="RETRIEVAL_QUERY")[0]
-
-    # Build filter clause — applied before cosine ranking
-    filter_parts, params = _build_filter_sql(filters, table_prefix="i")
-    filter_clause = ("AND " + " AND ".join(filter_parts)) if filter_parts else ""
-
-    sql = text(f"""
-        SELECT
-            c.id          AS chunk_id,
-            c.document_id,
-            c.invoice_id,
-            c.kind,
-            c.text        AS chunk_text,
-            (1 - (c.embedding <=> CAST(:q_vec AS vector))) AS score,
-            NULL::text    AS snippet,
-            i.supplier_name,
-            i.invoice_number,
-            i.invoice_date,
-            i.total,
-            i.status      AS inv_status,
-            i.currency
-        FROM chunks c
-        LEFT JOIN invoices i ON c.invoice_id = i.id
-        WHERE c.indexed = true
-        {filter_clause}
-        ORDER BY c.embedding <=> CAST(:q_vec AS vector)
-        LIMIT :lim
-    """)
-
-    params["q_vec"] = str(q_vec)
-    params["lim"] = limit
-
-    rows = session.execute(sql, params).mappings().all()
-    return [
-        SearchResult(
-            document_id=r["document_id"],
-            invoice_id=r.get("invoice_id"),
-            supplier_name=r.get("supplier_name"),
-            invoice_number=r.get("invoice_number"),
-            invoice_date=r.get("invoice_date"),
-            total=r.get("total"),
-            status=r.get("inv_status"),
-            snippet=r.get("snippet"),
-            score=float(r.get("score") or 0.0),
-            matched_by="semantic",
-        )
-        for r in rows
-    ]
-
-
-# ---------------------------------------------------------------------------
-# Hybrid RRF fusion
-# ---------------------------------------------------------------------------
-
-def _rrf_fusion(
-    kw_rows: list[dict],
-    sem_results: list[SearchResult],
-    k: int = _RRF_K,
-) -> list[SearchResult]:
-    """Reciprocal Rank Fusion of keyword and semantic result lists."""
-    # Build chunk_id → rank maps
-    kw_rank: dict[Any, int] = {r["chunk_id"]: i for i, r in enumerate(kw_rows)}
-    sem_rank: dict[Any, int] = {
-        (r.invoice_id or r.document_id): i for i, r in enumerate(sem_results)
-    }
-
-    # Collect all unique keys
-    all_kw_chunk_ids = {r["chunk_id"] for r in kw_rows}
-    all_sem_keys = {(r.invoice_id or r.document_id) for r in sem_results}
-
-    # Score by chunk_id for keyword; key for semantic
-    # We'll use chunk-level scoring for KW, then map to deduplicated SearchResult
-    scores: dict[Any, float] = {}
-
-    chunk_to_result: dict[Any, dict] = {r["chunk_id"]: r for r in kw_rows}
-    key_to_sem: dict[Any, SearchResult] = {
-        (r.invoice_id or r.document_id): r for r in sem_results
-    }
-
-    for chunk_id, rank in kw_rank.items():
-        scores[chunk_id] = scores.get(chunk_id, 0.0) + 1.0 / (k + rank + 1)
-
-    for key, rank in sem_rank.items():
-        scores[key] = scores.get(key, 0.0) + 1.0 / (k + rank + 1)
-
-    # Build merged results
-    merged: list[SearchResult] = []
-    seen_chunk_ids: set[Any] = set()
-    seen_sem_keys: set[Any] = set()
-
-    # Add keyword results
-    for chunk_id, row in chunk_to_result.items():
-        if chunk_id in seen_chunk_ids:
-            continue
-        seen_chunk_ids.add(chunk_id)
-        merged.append(SearchResult(
-            document_id=row["document_id"],
-            invoice_id=row.get("invoice_id"),
-            supplier_name=row.get("supplier_name"),
-            invoice_number=row.get("invoice_number"),
-            invoice_date=row.get("invoice_date"),
-            total=row.get("total"),
-            status=row.get("inv_status"),
-            snippet=row.get("snippet"),
-            score=scores.get(chunk_id, 0.0),
-            matched_by="hybrid",
-        ))
-
-    # Add semantic results not already in keyword
-    for r in sem_results:
-        key = r.invoice_id or r.document_id
-        if key in seen_sem_keys:
-            continue
-        seen_sem_keys.add(key)
-        merged.append(SearchResult(
-            document_id=r.document_id,
-            invoice_id=r.invoice_id,
-            supplier_name=r.supplier_name,
-            invoice_number=r.invoice_number,
-            invoice_date=r.invoice_date,
-            total=r.total,
-            status=r.status,
-            snippet=r.snippet,
-            score=scores.get(key, 0.0),
-            matched_by="hybrid",
-        ))
-
-    merged.sort(key=lambda r: r.score, reverse=True)
-    return merged
-
-
-# ---------------------------------------------------------------------------
-# Filter SQL builder
-# ---------------------------------------------------------------------------
-
-def _build_filter_sql(
-    filters: dict[str, Any],
-    table_prefix: str = "i",
-) -> tuple[list[str], dict[str, Any]]:
-    """Build WHERE clause fragments and parameters for invoice-level filters.
-
-    Returns (filter_parts, params).  Filters on NULL invoice_id (page chunks)
-    are skipped via IS NULL check so page chunks are always included when no
-    invoice filter applies.
-    """
-    parts: list[str] = []
-    params: dict[str, Any] = {}
-    p = table_prefix
-
+def _invoice_conditions(inv: Any, filters: dict[str, Any]) -> list:
+    conds = []
     if filters.get("status"):
-        parts.append(f"({p}.status = :f_status OR {p}.status IS NULL)")
-        params["f_status"] = filters["status"]
-
+        conds.append(inv.status == filters["status"])
     if filters.get("currency"):
-        parts.append(f"({p}.currency = :f_currency OR {p}.currency IS NULL)")
-        params["f_currency"] = filters["currency"]
-
+        conds.append(inv.currency == filters["currency"].upper())
     if filters.get("supplier"):
-        esc = _escape_ilike(filters["supplier"])
-        parts.append(f"({p}.supplier_name ILIKE :f_supplier ESCAPE '\\\\' OR {p}.supplier_name IS NULL)")
-        params["f_supplier"] = f"%{esc}%"
-
+        conds.append(inv.supplier_name.ilike(f"%{escape_like(filters['supplier'])}%", escape="\\"))
+    # invoice_date is stored as ISO text, so string comparison orders correctly
     if filters.get("date_from"):
-        parts.append(f"({p}.invoice_date >= :f_date_from OR {p}.invoice_date IS NULL)")
-        params["f_date_from"] = filters["date_from"]
-
+        conds.append(inv.invoice_date >= filters["date_from"].isoformat())
     if filters.get("date_to"):
-        parts.append(f"({p}.invoice_date <= :f_date_to OR {p}.invoice_date IS NULL)")
-        params["f_date_to"] = filters["date_to"]
-
+        conds.append(inv.invoice_date <= filters["date_to"].isoformat())
     if filters.get("min_total") is not None:
-        parts.append(f"({p}.total >= :f_min_total OR {p}.total IS NULL)")
-        params["f_min_total"] = str(filters["min_total"])
-
+        conds.append(inv.total >= filters["min_total"])
     if filters.get("max_total") is not None:
-        parts.append(f"({p}.total <= :f_max_total OR {p}.total IS NULL)")
-        params["f_max_total"] = str(filters["max_total"])
+        conds.append(inv.total <= filters["max_total"])
+    return conds
 
-    return parts, params
+
+def _filter_clause(filters: dict[str, Any]):
+    """Summary chunks: their invoice must match.  Page chunks: some invoice of the document must."""
+    if not _invoice_conditions(Invoice, filters):
+        return true()
+    other = aliased(Invoice)
+    doc_has_match = exists().where(other.document_id == Chunk.document_id,
+                                   *_invoice_conditions(other, filters))
+    return or_(
+        and_(Chunk.invoice_id.is_not(None), *_invoice_conditions(Invoice, filters)),
+        and_(Chunk.invoice_id.is_(None), doc_has_match),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Candidate lists
+# ---------------------------------------------------------------------------
+
+def _select(score, snippet):
+    return (
+        select(
+            Chunk.document_id, Chunk.invoice_id, Chunk.kind,
+            score.label("score"), snippet.label("snippet"),
+            Document.filename, Document.status.label("doc_status"),
+            Invoice.supplier_name, Invoice.invoice_number, Invoice.invoice_date,
+            Invoice.total, Invoice.currency, Invoice.status.label("inv_status"),
+        )
+        .select_from(Chunk)
+        .join(Document, Chunk.document_id == Document.id)
+        .outerjoin(Invoice, Chunk.invoice_id == Invoice.id)
+    )
+
+
+def _keyword_rows(q: str, session: Session, flt) -> list[Any]:
+    tsq = func.plainto_tsquery(_SIMPLE, q)
+    like = f"%{escape_like(q)}%"
+    field_hit = or_(Invoice.invoice_number.ilike(like, escape="\\"),
+                    Invoice.supplier_name.ilike(like, escape="\\"))
+    # an exact field hit outranks any ts_rank (which is < 1 for short chunks)
+    score = func.ts_rank(Chunk.tsv, tsq) + case((field_hit, 1.0), else_=0.0)
+    stmt = (
+        _select(score, func.ts_headline(_SIMPLE, Chunk.text, tsq, _HEADLINE_OPTS))
+        .where(or_(Chunk.tsv.op("@@")(tsq), field_hit), flt)
+        .order_by(score.desc(), Chunk.id)
+        .limit(_KEYWORD_POOL)
+    )
+    return list(session.execute(stmt))
+
+
+def _embed_query(q: str, embedder: "Embedder | None") -> list[float]:
+    if embedder is None:
+        raise EmbeddingUnavailable("No embedder configured")
+    try:
+        return embedder.embed([q], task_type="RETRIEVAL_QUERY")[0]
+    except Exception as exc:
+        log.warning("Query embedding failed: %s", type(exc).__name__)
+        raise EmbeddingUnavailable("Semantic search is temporarily unavailable") from exc
+
+
+def _semantic_rows(q_vec: list[float], q: str, session: Session, flt) -> list[Any]:
+    distance = Chunk.embedding.cosine_distance(q_vec)
+    tsq = func.plainto_tsquery(_SIMPLE, q)
+    stmt = (
+        _select(1 - distance, func.ts_headline(_SIMPLE, Chunk.text, tsq, _HEADLINE_OPTS))
+        .where(Chunk.indexed.is_(True), Chunk.embedding.is_not(None), flt)
+        .order_by(distance, Chunk.id)
+        .limit(_SEMANTIC_LIMIT)
+    )
+    return list(session.execute(stmt))
+
+
+# ---------------------------------------------------------------------------
+# Grouping and fusion
+# ---------------------------------------------------------------------------
+
+def _key(row: Any) -> tuple:
+    return ("inv", row.invoice_id) if row.invoice_id else ("doc", row.document_id)
+
+
+def _to_result(row: Any, matched_by: str) -> SearchResult:
+    return SearchResult(
+        document_id=row.document_id,
+        invoice_id=row.invoice_id,
+        kind=row.kind,
+        filename=row.filename,
+        supplier_name=row.supplier_name,
+        invoice_number=row.invoice_number,
+        invoice_date=row.invoice_date,
+        total=row.total,
+        currency=row.currency,
+        status=row.inv_status or row.doc_status,
+        snippet=row.snippet,
+        score=float(row.score or 0.0),
+        matched_by=matched_by,
+    )
+
+
+def _group(rows: list[Any], matched_by: str) -> list[SearchResult]:
+    """Keep the best-ranked row per result key, preserving rank order."""
+    seen: dict[tuple, SearchResult] = {}
+    for row in rows:
+        k = _key(row)
+        if k not in seen:
+            seen[k] = _to_result(row, matched_by)
+    return list(seen.values())
+
+
+def _rrf(kw: list[SearchResult], sem: list[SearchResult], k: int = _RRF_K) -> list[SearchResult]:
+    """Reciprocal Rank Fusion over grouped lists (ranks start at 1)."""
+    def key(r: SearchResult) -> tuple:
+        return ("inv", r.invoice_id) if r.invoice_id else ("doc", r.document_id)
+
+    fused: dict[tuple, SearchResult] = {}
+    scores: dict[tuple, float] = {}
+    for rank, r in enumerate(kw, start=1):
+        fused[key(r)] = r          # keyword row first: its snippet is highlighted
+        scores[key(r)] = 1.0 / (k + rank)
+    for rank, r in enumerate(sem, start=1):
+        kk = key(r)
+        scores[kk] = scores.get(kk, 0.0) + 1.0 / (k + rank)
+        if kk in fused:
+            fused[kk].matched_by = "both"
+        else:
+            fused[kk] = r
+    for kk, r in fused.items():
+        r.score = scores[kk]
+    return sorted(fused.values(), key=lambda r: r.score, reverse=True)

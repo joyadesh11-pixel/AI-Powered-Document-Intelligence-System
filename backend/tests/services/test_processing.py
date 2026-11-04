@@ -18,7 +18,8 @@ from reportlab.pdfgen import canvas
 from app.db.models import Document, Invoice, ProcessingEvent, ValidationIssue
 from app.schemas.models import ExtractedInvoice, IssueCode
 from app.services.ingest import save_upload
-from app.services.processing import DBSeenStore, _UPLOAD_DIR, process_document
+from app.services.ingest import upload_dir
+from app.services.processing import DBSeenStore, process_document
 from tests.fakes import FakeLLM
 
 
@@ -162,8 +163,8 @@ def test_failed_document_on_corrupt_file(session, tmp_path):
     # save_upload would (correctly) reject these bytes, so insert the row directly
     data = b"not a real PDF at all" + b"\x00" * 100
     file_hash = hashlib.sha256(data).hexdigest()
-    _UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-    (_UPLOAD_DIR / file_hash).write_bytes(data)
+    upload_dir().mkdir(parents=True, exist_ok=True)
+    (upload_dir() / file_hash).write_bytes(data)
     doc = Document(filename="fake.jpg", file_hash=file_hash, file_type="image",
                    size_bytes=len(data), status="queued")
     session.add(doc)
@@ -195,3 +196,98 @@ def test_dbseenstore_excludes_same_file_hash(session):
     assert store.contains(inv.dup_key) is True
     # With the same file's hash excluded: should not find it
     assert store.contains(inv.dup_key, exclude_hash=doc.file_hash) is False
+
+
+# --- M8b ---------------------------------------------------------------------
+
+from datetime import datetime, timedelta, timezone
+
+from sqlalchemy.exc import OperationalError
+
+from app.services.errors import InfraError
+from app.services.processing import claim
+
+
+def test_events_follow_pipeline_order_with_attempt(session):
+    doc = _upload_and_save(_make_invoice_pdf(), "order.pdf", session)
+    outcome = process_document(doc.id, session, llm=FakeLLM(responses=[_fake_invoice_response()]))
+    session.commit()
+
+    events = (session.query(ProcessingEvent).filter_by(document_id=doc.id)
+              .order_by(ProcessingEvent.id).all())
+    nodes = [e.node for e in events]
+    assert nodes[0] == "intake"
+    assert nodes[-1] == "finalize"
+    assert nodes.index("pdf_text") < nodes.index("llm_extract") < nodes.index("validate")
+    assert {e.attempt for e in events} == {1}
+    assert outcome.status == session.get(Document, doc.id).status
+    assert outcome.should_index is True
+
+
+def test_claim_only_queued_or_stale_processing(session):
+    doc = _upload_and_save(_make_invoice_pdf("INV-C"), "c.pdf", session)
+    assert claim(doc.id, session) is True          # queued -> processing
+    assert claim(doc.id, session) is False         # fresh processing: someone owns it
+
+    stale = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=1)
+    session.get(Document, doc.id).updated_at = stale
+    session.commit()
+    assert claim(doc.id, session) is True          # stale processing: worker died
+
+    session.get(Document, doc.id).status = "validated_ok"
+    session.commit()
+    assert claim(doc.id, session) is False         # finished: redelivery is a no-op
+
+
+def test_finished_document_redelivery_is_noop(session):
+    doc = _upload_and_save(_make_invoice_pdf("INV-R"), "r.pdf", session)
+    process_document(doc.id, session, llm=FakeLLM(responses=[_fake_invoice_response("INV-R")]))
+    session.commit()
+    n_events = session.query(ProcessingEvent).filter_by(document_id=doc.id).count()
+
+    llm = FakeLLM(responses=[])
+    outcome = process_document(doc.id, session, llm=llm)
+    assert outcome.skipped is True
+    assert llm.calls == []
+    assert session.query(ProcessingEvent).filter_by(document_id=doc.id).count() == n_events
+
+
+def test_db_outage_raises_infra_error_and_requeues(session, monkeypatch):
+    from app.services import processing
+
+    doc = _upload_and_save(_make_invoice_pdf("INV-O"), "o.pdf", session)
+
+    def boom(*a, **k):
+        raise OperationalError("SELECT 1", {}, Exception("server closed the connection"))
+        yield  # pragma: no cover
+
+    monkeypatch.setattr(processing, "stream_process", boom)
+    with pytest.raises(InfraError):
+        process_document(doc.id, session, llm=FakeLLM(responses=[]))
+
+    session.rollback()
+    doc = session.get(Document, doc.id)
+    session.refresh(doc)
+    assert doc.status == "queued"      # retry can claim it again
+    assert doc.error_code is None
+
+
+def test_unexpected_error_marks_failed_without_traceback(session, monkeypatch):
+    from app.services import processing
+
+    doc = _upload_and_save(_make_invoice_pdf("INV-U"), "u.pdf", session)
+
+    def boom(*a, **k):
+        raise KeyError("x" * 5000)
+        yield  # pragma: no cover
+
+    monkeypatch.setattr(processing, "stream_process", boom)
+    with pytest.raises(KeyError):
+        process_document(doc.id, session, llm=FakeLLM(responses=[]))
+
+    doc = session.get(Document, doc.id)
+    session.refresh(doc)
+    assert doc.status == "failed"
+    assert doc.error_code == "INTERNAL_ERROR"
+    assert len(doc.error) <= 500
+    assert "Traceback" not in doc.error

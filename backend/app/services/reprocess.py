@@ -1,9 +1,9 @@
 """Reprocess service: re-queue a document for processing.
 
-Eligible states: failed always; needs_review only with force=True.
+Eligible states: failed always; needs_review only with force=True.  Anything
+else (queued, processing, validated_ok) raises Conflict.
 Deletes previous invoices/pages/chunks (keeps processing_events history).
-Bumps attempt counter; sets status=queued.
-M8b Celery worker will call process_document when it picks it up.
+Bumps attempt counter; sets status=queued.  The caller commits, then enqueues.
 """
 from __future__ import annotations
 
@@ -12,41 +12,36 @@ from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
-from app.db.models import Chunk, Document, DocumentPage, Invoice
+from app.db.models import Chunk, Document, DocumentPage, Invoice, ValidationIssue
+from app.schemas.models import DocStatus
+from app.services.errors import Conflict, NotFound
 
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-class ReprocessNotEligible(Exception):
-    pass
-
-
 def run(document_id: uuid.UUID, session: Session, *, force: bool = False) -> Document:
-    """Re-queue document_id for reprocessing.
-
-    Raises ReprocessNotEligible if the document is not in an eligible state.
-    Returns the updated Document.
-    """
-    doc = session.get(Document, document_id)
+    """Re-queue document_id for reprocessing and return the updated Document."""
+    doc = session.get(Document, document_id, with_for_update=True)
     if doc is None:
-        raise ValueError(f"Document {document_id} not found")
+        raise NotFound(f"Document {document_id} not found")
 
-    eligible = doc.status == "failed" or (force and doc.status == "needs_review")
+    eligible = doc.status == DocStatus.failed.value or (
+        force and doc.status == DocStatus.needs_review.value
+    )
     if not eligible:
-        raise ReprocessNotEligible(
-            f"Document {document_id} has status={doc.status!r}; "
-            "only 'failed' documents (or 'needs_review' with force=True) can be reprocessed"
-        )
+        hint = " (pass force=true)" if doc.status == DocStatus.needs_review.value else ""
+        raise Conflict(f"Document status is {doc.status!r}; cannot reprocess{hint}")
 
     # Delete previous result data; keep processing_events for audit
+    session.query(ValidationIssue).filter_by(document_id=document_id).delete(synchronize_session=False)
     session.query(Invoice).filter_by(document_id=document_id).delete(synchronize_session=False)
     session.query(DocumentPage).filter_by(document_id=document_id).delete(synchronize_session=False)
     session.query(Chunk).filter_by(document_id=document_id).delete(synchronize_session=False)
 
     doc.attempt += 1
-    doc.status = "queued"
+    doc.status = DocStatus.queued.value
     doc.error = None
     doc.error_code = None
     doc.current_node = None
