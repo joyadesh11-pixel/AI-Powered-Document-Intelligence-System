@@ -522,3 +522,23 @@ def test_zero_llm_mapping_xlsx_merged_header(fx):
     assert m["invoice_fields"].get("invoice_date") == "Invoice Date"
     assert m["invoice_fields"].get("supplier_name") is not None
     assert m["date_format"] == "%Y-%m-%d"
+
+
+def test_sheet_mapping_schema_has_no_empty_enum_value():
+    """Gemini rejects tool schemas whose enum contains an empty string (HTTP 400)."""
+    import json
+    from app.schemas.models import SheetMapping
+    enums = []
+
+    def walk(node):
+        if isinstance(node, dict):
+            if "enum" in node:
+                enums.append(node["enum"])
+            for v in node.values():
+                walk(v)
+        elif isinstance(node, list):
+            for v in node:
+                walk(v)
+
+    walk(SheetMapping.model_json_schema())
+    assert enums and all("" not in e for e in enums), json.dumps(enums)

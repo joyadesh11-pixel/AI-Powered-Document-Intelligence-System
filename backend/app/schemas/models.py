@@ -208,7 +208,7 @@ class SheetMapping(BaseModel):
     line_fields: dict[str, str] = {}
     date_format: str | None = None
     decimal_separator: Literal[".", ","] = "."
-    thousands_separator: Literal[",", ".", " ", ""] = ","
+    thousands_separator: Literal[",", ".", " "] | None = ","
     currency: str | None = None
     currency_column: str | None = None
     unmapped_columns: list[str] = []
