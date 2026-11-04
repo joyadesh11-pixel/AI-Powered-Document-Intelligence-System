@@ -201,3 +201,11 @@ def fake_providers(monkeypatch, fake_embedder):
     monkeypatch.setattr(providers, "get_llm", lambda: holder["llm"])
     monkeypatch.setattr(providers, "get_embedder", lambda: holder["embedder"])
     return holder
+
+
+@pytest.fixture(autouse=True)
+def _no_real_api_key(request, monkeypatch):
+    """backend/.env holds the real Gemini key. Only tests marked `live` may see it;
+    everything else stays offline and deterministic."""
+    if request.node.get_closest_marker("live") is None:
+        monkeypatch.delenv("GOOGLE_API_KEY", raising=False)

@@ -76,3 +76,22 @@ def test_embed_pending_only_touches_unindexed(session):
     assert n == 32
     assert [c["n"] for c in emb.calls] == [32]
     assert session.query(Chunk).filter_by(indexed=False).count() == 0
+
+
+class _WrongDimEmbedder(FakeEmbedder):
+    """Returns vectors of the wrong size, like a model ignoring output_dimensionality."""
+
+    def embed(self, texts, *, task_type="RETRIEVAL_DOCUMENT"):
+        self.calls.append({"n": len(texts), "task_type": task_type})
+        return [[0.1] * 3072 for _ in texts]
+
+
+def test_wrong_dimension_vectors_leave_chunks_unindexed_without_crashing(session):
+    doc = _doc_with_pages(session, 3)
+    done = index_document(doc.id, session, _WrongDimEmbedder())
+    session.commit()
+
+    assert done == 0
+    chunks = session.query(Chunk).filter_by(document_id=doc.id).all()
+    assert len(chunks) == 3 and not any(c.indexed for c in chunks)
+    assert all(c.embedding is None for c in chunks)

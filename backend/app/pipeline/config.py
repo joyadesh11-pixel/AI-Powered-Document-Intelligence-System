@@ -8,6 +8,22 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass, field
 from decimal import Decimal
+from pathlib import Path
+
+ENV_FILE = Path(__file__).resolve().parents[2] / ".env"   # backend/.env (git-ignored)
+
+
+def load_env(path: Path | str = ENV_FILE) -> None:
+    """Load KEY=VALUE pairs from `path` into os.environ without overriding variables
+    that are already set, so the API, workers and scripts all see the same settings."""
+    try:
+        from dotenv import load_dotenv
+    except ImportError:
+        return
+    load_dotenv(path, override=False)
+
+
+load_env()
 
 
 def _env(key: str, default: str) -> str:

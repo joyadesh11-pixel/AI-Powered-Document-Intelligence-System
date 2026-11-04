@@ -25,9 +25,11 @@ class Embedder(Protocol):
 class GeminiEmbedder:
     """Gemini embeddings via langchain-google-genai.
 
-    One client per task type, created lazily and reused.  Transient errors
-    (429 per-minute, 5xx, timeouts) are retried with backoff; config errors
-    and anything else propagate immediately.
+    One client, created lazily and reused.  task_type and output_dimensionality
+    are per-call arguments in this SDK (a constructor value is silently ignored,
+    which returned 3072-dim vectors for a vector(768) column).  Transient errors
+    (429 per-minute, 5xx, timeouts) are retried with backoff; config errors and
+    anything else propagate immediately.
     """
 
     _BACKOFF_S = (1.0, 2.0, 4.0)
@@ -36,26 +38,24 @@ class GeminiEmbedder:
         cfg = get_config()
         self._model = model or cfg.EMBED_MODEL
         self._dim = dim or cfg.EMBED_DIM
-        self._clients: dict[str, Any] = {}
+        self._client_obj: Any = None
         self._lock = threading.Lock()
 
-    def _client(self, task_type: str) -> Any:
+    def _client(self) -> Any:
         with self._lock:
-            if task_type not in self._clients:
+            if self._client_obj is None:
                 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
-                self._clients[task_type] = GoogleGenerativeAIEmbeddings(
-                    model=self._model,
-                    task_type=task_type,
-                    output_dimensionality=self._dim,
-                )
-            return self._clients[task_type]
+                self._client_obj = GoogleGenerativeAIEmbeddings(model=self._model)
+            return self._client_obj
 
     def embed(self, texts: list[str], *, task_type: str = "RETRIEVAL_DOCUMENT") -> list[list[float]]:
-        client = self._client(task_type)
+        client = self._client()
         for attempt in range(len(self._BACKOFF_S) + 1):
             try:
-                return client.embed_documents(texts)
+                return client.embed_documents(
+                    texts, task_type=task_type, output_dimensionality=self._dim
+                )
             except Exception as exc:
                 if _is_config_error(exc) or not _is_transient(exc) or attempt == len(self._BACKOFF_S):
                     raise

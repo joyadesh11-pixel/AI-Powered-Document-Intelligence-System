@@ -62,7 +62,8 @@ def summary_chunk(inv: Invoice) -> Chunk | None:
 
 def _embed_chunks(chunks: list[Chunk], embedder: "Embedder", label: object) -> int:
     """Embed chunks batch by batch; return how many were indexed."""
-    batch_size = get_config().INDEX_BATCH_SIZE
+    cfg = get_config()
+    batch_size, dim = cfg.INDEX_BATCH_SIZE, cfg.EMBED_DIM
     done = 0
     for i in range(0, len(chunks), batch_size):
         batch = chunks[i: i + batch_size]
@@ -71,6 +72,11 @@ def _embed_chunks(chunks: list[Chunk], embedder: "Embedder", label: object) -> i
         except Exception as exc:
             # leave this batch indexed=False; embed_pending retries it later
             log.warning("Embedding batch %d failed for %s: %s", i // batch_size, label, type(exc).__name__)
+            continue
+        if len(vectors) != len(batch) or any(len(v) != dim for v in vectors):
+            # a vector of the wrong size would fail the whole flush; treat it like a failed batch
+            log.warning("Embedding batch %d for %s has wrong shape (expected dim %d)",
+                        i // batch_size, label, dim)
             continue
         for chunk, vec in zip(batch, vectors):
             chunk.embedding = vec
