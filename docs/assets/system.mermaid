@@ -1,0 +1,11 @@
+flowchart LR
+  U[Browser<br/>Next.js frontend] -->|HTTP /api| API[FastAPI<br/>routes + validation]
+  API --> SVC[services<br/>ingest, processing, corrections,<br/>indexing, search]
+  API -->|enqueue| R[(Redis)]
+  R --> W[Celery worker<br/>threads pool]
+  W --> SVC
+  SVC --> P[pipeline<br/>pure LangGraph:<br/>file in, result out]
+  SVC --> DB[(PostgreSQL 16<br/>+ pgvector)]
+  P -->|text / vision / mapping| G[Gemini API]
+  SVC -->|embeddings| G
+  SVC --> FS[(data/uploads<br/>stored by SHA-256)]
