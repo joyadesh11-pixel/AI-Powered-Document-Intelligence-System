@@ -13,7 +13,7 @@ After applying the patch:
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
@@ -91,7 +91,7 @@ def apply(invoice_id: uuid.UUID, patch: dict, session: Session) -> Invoice:
             else:
                 try:
                     date_result = parse_date(raw_val)
-                    parsed[field_name] = str(date_result.value) if date_result.value else None
+                    parsed[field_name] = date_result.value or None
                 except Exception:
                     raise CorrectionParseError(field_name, f"Cannot parse date: {patch[field_name]!r}")
             corrected_field_names.add(field_name)
@@ -277,7 +277,7 @@ def apply(invoice_id: uuid.UUID, patch: dict, session: Session) -> Invoice:
     # Mark invoice summary chunk for re-embedding
     session.query(Chunk).filter_by(
         invoice_id=inv.id, kind="invoice_summary"
-    ).update({"indexed": False}, synchronize_session=False)
+    ).update({"indexed": False}, synchronize_session="fetch")
 
     session.flush()
     return inv
@@ -291,6 +291,13 @@ def _get_source_text(document_id: uuid.UUID, session: Session) -> str:
         .all()
     )
     return "\n".join(p.text or "" for p in pages)
+
+
+def _as_date(v: Any) -> date | None:
+    """Columns can hold an ISO string until the session reloads; validation needs a date."""
+    if v is None or isinstance(v, date):
+        return v
+    return date.fromisoformat(str(v))
 
 
 def _invoice_to_dict(inv: Invoice, session: Session) -> dict:
@@ -308,8 +315,8 @@ def _invoice_to_dict(inv: Invoice, session: Session) -> dict:
     return {
         "unit_id": inv.unit_index,
         "invoice_number": inv.invoice_number,
-        "invoice_date": inv.invoice_date,
-        "due_date": inv.due_date,
+        "invoice_date": _as_date(inv.invoice_date),
+        "due_date": _as_date(inv.due_date),
         "supplier_name": inv.supplier_name,
         "customer_name": inv.customer_name,
         "subtotal": Decimal(str(inv.subtotal)) if inv.subtotal is not None else None,

@@ -80,7 +80,7 @@ class Config:
     EMBED_DIM: int = 768
 
     # --- persistence (services layer only; pipeline is pure)
-    DATABASE_URL: str = "postgresql+psycopg2://dociq:dociq@localhost:5432/dociq"
+    DATABASE_URL: str = "postgresql+psycopg2://dociq:dociq@127.0.0.1:5433/dociq"
     REDIS_URL: str = "redis://localhost:6379/0"
 
 
@@ -120,6 +120,6 @@ def get_config() -> Config:
         LLM_MODEL_VISION=_env("LLM_MODEL_VISION", "gemini-2.5-pro"),
         EMBED_MODEL=_env("EMBED_MODEL", "gemini-embedding-001"),
         EMBED_DIM=_env_int("EMBED_DIM", 768),
-        DATABASE_URL=_env("DATABASE_URL", "postgresql+psycopg2://dociq:dociq@localhost:5432/dociq"),
+        DATABASE_URL=_env("DATABASE_URL", "postgresql+psycopg2://dociq:dociq@127.0.0.1:5433/dociq"),
         REDIS_URL=_env("REDIS_URL", "redis://localhost:6379/0"),
     )

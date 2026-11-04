@@ -4,7 +4,7 @@ Tests in this directory require a running Postgres instance.  If Postgres is
 not reachable, all tests skip cleanly with a clear message.
 
 Use DATABASE_URL_TEST env var to override the test database URL
-(default: postgresql+psycopg2://dociq:dociq@localhost:5432/dociq_test).
+(default: postgresql+psycopg2://dociq:dociq@127.0.0.1:5433/dociq_test).
 """
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ from sqlalchemy.orm import sessionmaker
 from app.db.base import create_all, Base
 from app.services.embedder import FakeEmbedder
 
-_DEFAULT_TEST_DB = "postgresql+psycopg2://dociq:dociq@localhost:5432/dociq_test"
+_DEFAULT_TEST_DB = "postgresql+psycopg2://dociq:dociq@127.0.0.1:5433/dociq_test"
 _TEST_DB_URL = os.environ.get("DATABASE_URL_TEST", _DEFAULT_TEST_DB)
 
 _TABLES_TO_TRUNCATE = [

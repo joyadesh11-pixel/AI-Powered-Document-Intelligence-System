@@ -12,7 +12,7 @@ DBMappingCache bridges the pipeline's mapping_cache callable to sheet_mapping_ca
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -294,11 +294,12 @@ def _persist_result(
             inv_db = _build_invoice_row(document_id, inv_obj, dup_key=dup_key, dup_of=None)
             if dup_key is not None:
                 try:
-                    session.add(inv_db)
-                    session.flush()
+                    # savepoint: a unique-key collision must not discard the rest of the result
+                    with session.begin_nested():
+                        session.add(inv_db)
+                        session.flush()
                     dup_key_to_id[dup_key] = inv_db.id
                 except IntegrityError:
-                    session.rollback()
                     existing = session.query(Invoice).filter_by(dup_key=dup_key).first()
                     inv_db = _build_invoice_row(
                         document_id, inv_obj,
@@ -335,8 +336,10 @@ def _build_invoice_row(
     def _dec(v: Any) -> Any:
         return None if v is None else Decimal(str(v))
 
-    def _date_str(v: Any) -> str | None:
-        return None if v is None else str(v)
+    def _date_str(v: Any) -> date | None:
+        if v is None or isinstance(v, date):
+            return v
+        return date.fromisoformat(str(v))
 
     return Invoice(
         document_id=document_id,

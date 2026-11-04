@@ -19,7 +19,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from pgvector.sqlalchemy import Vector
 
 from app.db.base import Base
-
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB, TSVECTOR, UUID
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
@@ -238,7 +238,7 @@ class Chunk(Base):
     page_no: Mapped[int | None] = mapped_column(Integer)
     text: Mapped[str] = mapped_column(Text, nullable=False)
     # Server-generated tsvector; SQLAlchemy reflects it but never writes it
-    tsv = Column(Text, Computed("to_tsvector('simple', coalesce(text, ''))", persisted=True))
+    tsv = Column(TSVECTOR, Computed("to_tsvector('simple', coalesce(text, ''))", persisted=True))
     embedding: Mapped[list | None] = mapped_column(Vector(768))
     indexed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 

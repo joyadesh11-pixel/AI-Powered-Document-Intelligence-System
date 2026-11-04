@@ -201,7 +201,7 @@ def _semantic_search(
             c.invoice_id,
             c.kind,
             c.text        AS chunk_text,
-            (1 - (c.embedding <=> :q_vec::vector)) AS score,
+            (1 - (c.embedding <=> CAST(:q_vec AS vector))) AS score,
             NULL::text    AS snippet,
             i.supplier_name,
             i.invoice_number,
@@ -213,7 +213,7 @@ def _semantic_search(
         LEFT JOIN invoices i ON c.invoice_id = i.id
         WHERE c.indexed = true
         {filter_clause}
-        ORDER BY c.embedding <=> :q_vec::vector
+        ORDER BY c.embedding <=> CAST(:q_vec AS vector)
         LIMIT :lim
     """)
 

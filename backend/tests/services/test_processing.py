@@ -5,6 +5,7 @@ without network calls.  No vision calls are made (no blurry pages).
 """
 from __future__ import annotations
 
+import hashlib
 import io
 import uuid
 from decimal import Decimal
@@ -17,7 +18,7 @@ from reportlab.pdfgen import canvas
 from app.db.models import Document, Invoice, ProcessingEvent, ValidationIssue
 from app.schemas.models import ExtractedInvoice, IssueCode
 from app.services.ingest import save_upload
-from app.services.processing import DBSeenStore, process_document
+from app.services.processing import DBSeenStore, _UPLOAD_DIR, process_document
 from tests.fakes import FakeLLM
 
 
@@ -137,7 +138,9 @@ def test_reprocess_same_file_not_duplicate(session):
     if inv_first is None:
         pytest.skip("No invoice extracted")
 
-    # Now reprocess
+    # Spec: force only applies to needs_review, so put the document in that state first
+    session.get(Document, doc.id).status = "needs_review"
+    session.commit()
     reprocess_run(doc.id, session, force=True)
     session.commit()
 
@@ -156,19 +159,22 @@ def test_reprocess_same_file_not_duplicate(session):
 @pytest.mark.usefixtures("truncate_tables")
 def test_failed_document_on_corrupt_file(session, tmp_path):
     """Corrupt file → document status failed (not stuck in processing)."""
-    bad_data = b"not a real PDF at all"
-    doc = _upload_and_save(bad_data + b"\xff\xd8\xff" + b"\x00" * 100, "fake.jpg", session)
-    # Make it seem like a JPG with bad content — should fail gracefully
-    try:
-        from tests.fakes import FakeLLM as FL
-        llm = FL(responses=[])
-        process_document(doc.id, session, llm=llm)
-    except Exception:
-        pass
+    # save_upload would (correctly) reject these bytes, so insert the row directly
+    data = b"not a real PDF at all" + b"\x00" * 100
+    file_hash = hashlib.sha256(data).hexdigest()
+    _UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    (_UPLOAD_DIR / file_hash).write_bytes(data)
+    doc = Document(filename="fake.jpg", file_hash=file_hash, file_type="image",
+                   size_bytes=len(data), status="queued")
+    session.add(doc)
+    session.commit()
+
+    process_document(doc.id, session, llm=FakeLLM(responses=[]))
     session.commit()
 
     doc = session.get(Document, doc.id)
-    assert doc.status in ("failed", "needs_review", "validated_ok")  # not stuck in processing
+    assert doc.status == "failed"
+    assert doc.error_code is not None
 
 
 @pytest.mark.usefixtures("truncate_tables")
