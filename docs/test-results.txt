@@ -6,60 +6,10 @@ The event loop scope for asynchronous fixtures will default to the "fixture" cac
 ........................................................................ [ 26%]
 ........................................................................ [ 39%]
 ........................................................................ [ 53%]
-............................................s..F........................ [ 66%]
+............................................s........................... [ 66%]
 ........................................................................ [ 79%]
-........................................................................ [ 93%]
-.....................................                                    [100%]
-================================== FAILURES ===================================
-___________________ test_t8_parallel_workers_preserve_order ___________________
-
-fx = {'pdf': WindowsPath('C:/Users/Sabkat_Desh/AppData/Local/Temp/pytest-of-Sabkat_Desh/pytest-109/fixtures0/digital_A_001....': WindowsPath('C:/Users/Sabkat_Desh/AppData/Local/Temp/pytest-of-Sabkat_Desh/pytest-109/fixtures0/utf8_001.csv'), ...}
-tmp_path = WindowsPath('C:/Users/Sabkat_Desh/AppData/Local/Temp/pytest-of-Sabkat_Desh/pytest-109/test_t8_parallel_workers_prese0')
-monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000025E80456000>
-
-    def test_t8_parallel_workers_preserve_order(fx, tmp_path, monkeypatch):
-        """T8: 4 pages with OCR_WORKERS=2 \u2192 all 4 pages present; matches sequential output."""
-        from app.pipeline.config import Config
-    
-        # Build a state with page_images pointing to 4 copies of scan_clean
-        prep = _prep_page(str(fx["scan_clean"]), tmp_path)
-        clean_img_path = prep["page_images"][0]
-    
-        page_images = {i: clean_img_path for i in range(4)}
-    
-        cfg_parallel = Config(OCR_WORKERS=2)
-        cfg_sequential = Config(OCR_WORKERS=1)
-    
-        state_base: dict[str, Any] = {
-            "page_images": page_images,
-            "low_conf_pages": [],
-            "scanned_pages": list(range(4)),
-            "page_text": {},
-            "page_source": {},
-            "ocr_conf": {},
-            "warnings": [],
-            "sim": {},
-        }
-    
-        # Patch get_config to return our configs
-        import app.pipeline.nodes.ocr as ocr_module
-    
-        monkeypatch.setattr(ocr_module, "get_config", lambda: cfg_parallel)
-        result_parallel = ocr({**state_base})
-    
-        monkeypatch.setattr(ocr_module, "get_config", lambda: cfg_sequential)
-        result_sequential = ocr({**state_base})
-    
-        # All 4 pages present
-        assert set(result_parallel["page_text"].keys()) == {0, 1, 2, 3}
->       assert all(len(t) > 0 for t in result_parallel["page_text"].values()), (
-            "all parallel OCR outputs should be non-empty"
-        )
-E       AssertionError: all parallel OCR outputs should be non-empty
-E       assert False
-E        +  where False = all(<generator object test_t8_parallel_workers_preserve_order.<locals>.<genexpr> at 0x0000025EEA701220>)
-
-tests\unit\test_ocr.py:271: AssertionError
+........................................................................ [ 92%]
+......................................                                   [100%]
 ============================== warnings summary ===============================
 ..\.venv\Lib\site-packages\starlette\testclient.py:51
   E:\AI-Powered Document Intelligence System\.venv\Lib\site-packages\starlette\testclient.py:51: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
@@ -74,6 +24,4 @@ tests/integration/test_scenarios.py::test_s7_xlsx_odd_headers_one_retry
     parsed = pd.to_datetime(series, errors="coerce")
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-=========================== short test summary info ===========================
-FAILED tests/unit/test_ocr.py::test_t8_parallel_workers_preserve_order - Asse...
-1 failed, 539 passed, 1 skipped, 5 deselected, 3 warnings in 188.59s (0:03:08)
+541 passed, 1 skipped, 5 deselected, 3 warnings in 158.34s (0:02:38)

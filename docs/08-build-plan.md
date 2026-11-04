@@ -21,7 +21,7 @@ If behind: cut in this order: frontend polish -> search filters -> API rate limi
 - [x] **M8b API + workers (Nov 3 morning cont., 1 h).** `api/`, `workers/`, Celery wiring. *Accept:* API tests green; `curl` upload -> poll -> result works with a real worker. Docs: 06.
 - [ ] **M9 Frontend (Nov 3 afternoon, 3 h).** Docs: 07. *Accept:* the manual flow at the end of docs/07 works.
 - [ ] **M10 Evaluation (Nov 3 evening first run, Nov 4 final).** `scripts/evaluate.py` + report. *Accept:* `eval/reports/<ts>/report.md` with all metrics from docs/05, error analysis written by you, honest limitations. Docs: 05.
-- [ ] **M11 Documentation (Nov 4 midday, 2 h).** README (below), architecture diagram (regenerate `graph.png` + one system diagram), DB schema doc/diagram, test results (`pytest` output saved to `docs/test-results.txt`), `docs/evaluation-report.md`, `docs/09-ai-disclosure.md` finalised, `docs/prompts-log.md` complete.
+- [x] **M11 Documentation (Nov 4 midday, 2 h).** README (below), architecture diagram (regenerate `graph.png` + one system diagram), DB schema doc/diagram, test results (`pytest` output saved to `docs/test-results.txt`), `docs/evaluation-report.md`, `docs/09-ai-disclosure.md` finalised, `docs/prompts-log.md` complete.
 - [ ] **M12 Video + submission (Nov 4 afternoon).** Record walkthrough; Drive link (anyone with link can view, test in incognito); submission email checklist at the bottom.
 
 ## README outline (what reviewers look for)

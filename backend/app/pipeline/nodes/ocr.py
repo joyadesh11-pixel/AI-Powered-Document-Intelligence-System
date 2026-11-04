@@ -22,6 +22,9 @@ from app.schemas.models import IssueCode, Severity
 # ------------------------------------------------------------------ thread-local engine
 
 _ENGINE = threading.local()
+# A failed ONNX run (typically "bad allocation" when two threads peak at once on a low-memory
+# machine) is retried once while holding this lock, so the retry runs with no concurrent OCR.
+_RETRY_LOCK = threading.Lock()
 
 
 def _get_engine():
@@ -119,7 +122,11 @@ def _rebuild_lines(results: list) -> tuple[str, float]:
 def _ocr_array(arr: np.ndarray) -> tuple[str, float]:
     """Run RapidOCR on a grayscale numpy array; return (text, conf)."""
     engine = _get_engine()
-    result, _ = engine(arr)
+    try:
+        result, _ = engine(arr)
+    except Exception:
+        with _RETRY_LOCK:
+            result, _ = engine(arr)
     return _rebuild_lines(result or [])
 
 

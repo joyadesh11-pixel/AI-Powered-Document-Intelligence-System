@@ -301,3 +301,20 @@ def test_nodup_image_prep_low_conf_not_double_reported(fx, tmp_path):
     assert 0 not in result.get("page_text", {}), (
         "page 0 should not be OCR'd when it was already in low_conf_pages"
     )
+
+
+def test_ocr_array_retries_once_when_engine_fails(monkeypatch):
+    """A transient ONNX failure (e.g. 'bad allocation') is retried instead of yielding empty text."""
+    import app.pipeline.nodes.ocr as ocr_module
+
+    calls = {"n": 0}
+
+    def engine(_arr):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise RuntimeError("bad allocation")
+        return [[[[0, 0], [10, 0], [10, 10], [0, 10]], "HELLO", 0.9]], None
+
+    monkeypatch.setattr(ocr_module, "_get_engine", lambda: engine)
+    text, conf = ocr_module._ocr_array(np.zeros((10, 10), dtype="uint8"))
+    assert calls["n"] == 2 and "HELLO" in text and conf > 0

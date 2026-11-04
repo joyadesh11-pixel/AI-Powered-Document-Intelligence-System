@@ -148,7 +148,7 @@ cd backend
 pytest -m "not live"      # offline: fake LLM, no network (database tests need docker compose up)
 pytest -m live            # a handful of real Gemini calls
 ```
-Latest offline run ([`docs/test-results.txt`](docs/test-results.txt)): **539 passed, 1 skipped, 1 failed**. The failure is `tests/unit/test_ocr.py::test_t8_parallel_workers_preserve_order`: with `OCR_WORKERS=2` some pages come back with empty text. It passed in two earlier full runs and now fails every time, so it looks like a thread-safety race in the shared OCR engine, not fixed yet (see section 9). Setting `OCR_WORKERS=1` avoids it. Tests are written from each node's spec (`docs/nodes/`) before the code, cover the pipeline, services (real Postgres), API (45 tests) and architecture rules. The frontend is checked with `npx tsc --noEmit` and `npm run build`.
+Latest offline run ([`docs/test-results.txt`](docs/test-results.txt)): **541 passed, 1 skipped** (live tests excluded). Tests are written from each node's spec (`docs/nodes/`) before the code, cover the pipeline, services (real Postgres), API (45 tests) and architecture rules. The frontend is checked with `npx tsc --noEmit` and `npm run build`.
 
 ## 8. Evaluation summary
 Source: [`docs/evaluation-report.md`](docs/evaluation-report.md), produced by `scripts/evaluate.py` from real pipeline runs (nothing typed by hand).
@@ -175,7 +175,7 @@ Findings from the evaluation that are **not fixed**:
 - `tabular_001.xlsx`, `legacy_001.xls`, `utf8_001.csv` and `cp1252_001.csv` end `needs_review` with `MISSING_REQUIRED(total)`; the ground truth expects `validated_ok`.
 - `mixed.pdf` was marked `validated_ok` with a line-item detail wrong (the one silent error).
 - `dup_invnum_001/002` report `LINES_MISSING`; `digital_A_003` had arithmetic errors.
-- **OCR thread-safety race:** with `OCR_WORKERS=2` (the default) parallel OCR can return empty text for a page (failing test above). Not fixed; `OCR_WORKERS=1` avoids it.
+- **OCR memory pressure:** on a machine with little free RAM (about 1.6 GB here) two parallel OCR threads could hit an ONNX "bad allocation" and a page came back empty. Fixed with one retry under a lock (`ocr.py`, regression test added); `OCR_WORKERS=1` avoids it entirely.
 - `pdf_text` took 83 s on the generated 220-page PDF.
 - Evaluation limits: partial run, one sample per file, synthetic layouts only, no handwriting, ground truth has few null fields, the sheet-mapping cache and cross-file duplicate detection were off.
 - The first 12 LLM files in the evaluation ran while vision returned 404 (see the report header).
