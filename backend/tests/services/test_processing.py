@@ -291,3 +291,19 @@ def test_unexpected_error_marks_failed_without_traceback(session, monkeypatch):
     assert doc.error_code == "INTERNAL_ERROR"
     assert len(doc.error) <= 500
     assert "Traceback" not in doc.error
+
+
+@pytest.mark.usefixtures("truncate_tables")
+@pytest.mark.parametrize("key", ["xlsx", "csv", "xls_legacy"])
+def test_spreadsheets_process_from_hash_named_storage(session, fx, key):
+    """Files are stored as <sha256> with no extension; the pipeline still needs the real one."""
+    path = fx[key]
+    result = save_upload(path.name, path.read_bytes(), session)
+    session.commit()
+
+    process_document(result.document.id, session, llm=FakeLLM(responses=[]))
+    session.commit()
+
+    doc = session.get(Document, result.document.id)
+    assert doc.status != "failed", (doc.error_code, doc.error)
+    assert session.query(Invoice).filter_by(document_id=doc.id).count() >= 1

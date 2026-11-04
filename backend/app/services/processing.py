@@ -11,10 +11,16 @@ DBMappingCache bridges the pipeline's mapping_cache callable to sheet_mapping_ca
 """
 from __future__ import annotations
 
+import os
+import shutil
+import tempfile
 import uuid
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
+from pathlib import Path
 from typing import Any
 
 from sqlalchemy import and_, or_, update
@@ -199,10 +205,41 @@ def process_document(
 
 def _run_pipeline(doc: Document, deps: Deps, session: Session) -> PipelineResult:
     """Iterate stream_process, writing one processing_events row per node."""
-    file_path = str(upload_dir() / doc.file_hash)
     attempt = doc.attempt
     result_dict: dict | None = None
 
+    with _path_with_extension(doc) as file_path:
+        result_dict = _stream_events(doc, file_path, deps, session, attempt)
+
+    if result_dict is None:
+        raise RuntimeError("stream_process completed without producing a result")
+    return PipelineResult.model_validate(result_dict)
+
+
+@contextmanager
+def _path_with_extension(doc: Document) -> Iterator[str]:
+    """Yield a path to the stored file that ends in the original extension.
+
+    Uploads are stored as <sha256> (no extension) but the intake node decides
+    sheet and image handling from the extension.  A hard link (copy if the
+    filesystem refuses) in a scratch directory next to the uploads gives the
+    pipeline the name it needs without changing how files are stored.
+    """
+    src = upload_dir() / doc.file_hash
+    scratch_root = upload_dir() / "tmp"
+    scratch_root.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(dir=scratch_root) as scratch:
+        dest = Path(scratch) / f"{doc.file_hash}{Path(doc.filename).suffix.lower()}"
+        try:
+            os.link(src, dest)
+        except OSError:
+            shutil.copyfile(src, dest)
+        yield str(dest)
+
+
+def _stream_events(doc: Document, file_path: str, deps: Deps, session: Session,
+                   attempt: int) -> dict | None:
+    result_dict: dict | None = None
     for node_name, node_update in stream_process(file_path, deps=deps):
         # Capture the final result written by finalize/fail nodes
         if "result" in node_update:
@@ -226,10 +263,7 @@ def _run_pipeline(doc: Document, deps: Deps, session: Session) -> PipelineResult
             at=_now(),
         ))
         session.commit()
-
-    if result_dict is None:
-        raise RuntimeError("stream_process completed without producing a result")
-    return PipelineResult.model_validate(result_dict)
+    return result_dict
 
 
 def _requeue_best_effort(document_id: uuid.UUID, session: Session) -> None:
