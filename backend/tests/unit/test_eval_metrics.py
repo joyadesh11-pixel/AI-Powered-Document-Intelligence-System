@@ -424,3 +424,13 @@ def test_fully_correct_rate_counts_missed_invoices_in_denominator():
     recs = [rec("a.pdf", invoices=[pred_inv(invoice_number="A")])]
     fc = run(recs, gts)["fully_correct"]
     assert fc["denominator"] == 2 and fc["count"] == 1 and fc["rate"] == pytest.approx(0.5)
+
+
+def test_files_without_gt_invoices_do_not_swamp_review_rate_or_tier_shares():
+    gts = [gt_entry("a.pdf"), gt_entry("perf.xlsx", group="sheet_m4_perf", status="needs_review", invoices=[])]
+    recs = [rec("a.pdf"),
+            rec("perf.xlsx", status="needs_review", file_type="sheet",
+                invoices=[pred_inv("needs_review", tier="sheet") for _ in range(50)])]
+    out = run(recs, gts)
+    assert out["review"]["n_invoices"] == 1
+    assert out["tiers"]["counts"] == {"parser": 1}
